@@ -1,0 +1,23 @@
+{
+    "anthropic:claude-3-5-sonnet-latest": 200000,
+    "anthropic:claude-3-5-haiku-latest": 200000,
+    "anthropic:claude-3-sonnet-20240229": 200000,
+    "anthropic:claude-3-haiku-20240307": 200000,
+    "anthropic:claude-3-opus-latest": 200000,
+    "google:gemini-1.5-flash": 1048576,
+    "google:gemini-1.5-pro": 2097152,
+    "groq:gemma2-9b-it": 8192,
+    "groq:gemma-7b-it": 8192,
+    "groq:llama-3.1-8b-instant": 128000,
+    "groq:llama-3.1-70b-versatile": 128000,
+    "groq:llama-3.2-1b-preview": 128000,
+    "groq:llama-3.2-3b-preview": 128000,
+    "openai:gpt-3.5-turbo": 16385,
+    "openai:gpt-4": 8192,
+    "openai:gpt-4-turbo": 128000,
+    "openai:gpt-4o": 128000,
+    "openai:chatgpt-4o-latest": 128000,
+    "openai:gpt-4o-mini": 128000,
+    "openai:o1-preview": 128000,
+    "openai:o1-mini": 128000
+}

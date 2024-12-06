@@ -1,0 +1,7 @@
+aisuite[all]
+evalica
+gradio[oauth]
+gradio_leaderboard
+huggingface_hub
+python-dotenv
+vertexai
