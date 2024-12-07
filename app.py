@@ -337,6 +337,15 @@ with gr.Blocks() as app:
                 "Newman Modularity Score",
             ],
         )
+        # Add a citation block in Markdown
+        citation_component = gr.Markdown(
+            """
+            Made with ❤️ for SE Arena. If this work is useful to you, please consider citing:
+            ```
+            [TODO]
+            ```
+            """
+        )
     with gr.Tab("⚔️Arena"):
         # Add title and description as a Markdown component
         arena_intro = gr.Markdown(
