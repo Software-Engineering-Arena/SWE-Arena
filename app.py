@@ -167,9 +167,9 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
 
     try:
         api = HfApi()
-
+        print('here')
         # List all files in the repository
-        repo_files = api.list_repo_files(repo_id="SE-Arena/votes", repo_type="dataset")
+        repo_files = api.list_repo_files(repo_id=repo_name, repo_type="dataset")
 
         # Filter files by current year and month
         feedback_files = [file for file in repo_files if year_month in file]
