@@ -371,13 +371,13 @@ with gr.Blocks() as app:
     with gr.Tab("⚔️Arena"):
         # Add title and description as a Markdown component
         arena_intro = gr.Markdown(
-            """
+            f"""
             # ⚔️ Software Engineering (SE) Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
 
             ## 📜How It Works
-            - **Blind Comparison**: Submit any software engineering-related query to two anonymous chatbots, including top models like ChatGPT, Gemini, Claude, Llama, and others.
-            - **Interactive Voting**: Engage in multi-turn dialogues and compare responses. Continue the conversation until you're confident in choosing the better model.
-            - **Fair Play Rules**: Votes are valid only when chatbot identities remain anonymous—revealed identities disqualify the session.
+            - **Blind Comparison**: Submit a software engineering-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models, including ChatGPT, Gemini, Claude, Llama, and others.
+            - **Interactive Voting**: Engage in multi-turn dialogues with both chatbots and compare their responses. You can continue the conversation until you confidently choose the better model.
+            - **Fair Play Rules**: Votes are counted only if chatbot identities remain anonymous. Revealing a chatbot's identity disqualifies the session.
 
             **Note:** Due to budget constraints, responses that take longer than one minute to generate will be discarded.
             """,
