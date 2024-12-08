@@ -31,7 +31,7 @@ with open(credentials_path, "w") as f:
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
 # Timeout in seconds for model response
-TIMEOUT = 60  
+TIMEOUT = 60
 
 # Initialize AISuite Client
 client = ai.Client()
@@ -55,6 +55,7 @@ if len(available_models) < 2:
 models_state = {}
 conversation_state = {}
 
+
 # Truncate prompt
 def truncate_prompt(prompt, model_alias, models):
     model_name = models[model_alias]
@@ -64,7 +65,9 @@ def truncate_prompt(prompt, model_alias, models):
     return prompt
 
 
-def chat_with_models(user_input, model_alias, models, conversation_state, timeout=TIMEOUT):
+def chat_with_models(
+    user_input, model_alias, models, conversation_state, timeout=TIMEOUT
+):
     model_name = models[model_alias]
     truncated_input = truncate_prompt(user_input, model_alias, models)
     conversation_state.setdefault(model_name, []).append(
@@ -293,9 +296,9 @@ def get_leaderboard_data():
 # Function to enable or disable submit buttons based on textbox content
 def toggle_submit_button(text):
     if not text or text.strip() == "":
-        return gr.update(interactive=False)
+        return gr.update(interactive=False)  # Disable the button
     else:
-        return gr.update(interactive=True)
+        return gr.update(interactive=True)  # Enable the button
 
 
 # Gradio Interface
@@ -562,7 +565,9 @@ with gr.Blocks() as app:
                 return (
                     gr.update(visible=False),  # Hide the login button
                     gr.update(interactive=True),  # Enable shared_input
-                    gr.update(interactive=True),  # Enable send_first button
+                    gr.update(
+                        interactive=False
+                    ),  # Keep send_first button disabled initially
                     gr.update(interactive=True),  # Enable feedback radio buttons
                     gr.update(interactive=True),  # Enable submit_feedback_btn
                     gr.update(visible=False),  # Hide the hint string
