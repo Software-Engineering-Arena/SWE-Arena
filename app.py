@@ -57,19 +57,50 @@ conversation_state = {}
 
 
 # Truncate prompt
-def truncate_prompt(prompt, model_alias, models):
+def truncate_prompt(user_input, model_alias, models, conversation_state):
+    """
+    Truncate the conversation history and user input to fit within the model's context window.
+
+    Args:
+        user_input (str): The latest input from the user.
+        model_alias (str): Alias for the model being used (e.g., "Model A", "Model B").
+        models (dict): Dictionary mapping model aliases to their names.
+        conversation_state (dict): State containing the conversation history for all models.
+
+    Returns:
+        str: Truncated conversation history and user input.
+    """
     model_name = models[model_alias]
     context_length = context_window.get(model_name, 4096)
-    while len(json.dumps({"role": "user", "content": prompt})) > context_length:
-        prompt = prompt[:-10] if len(prompt) > 10 else prompt[:1]
-    return prompt
+
+    # Get the full conversation history for the model
+    history = conversation_state.get(model_name, [])
+    full_conversation = [{"role": msg["role"], "content": msg["content"]} for msg in history]
+    full_conversation.append({"role": "user", "content": user_input})
+
+    # Convert to JSON string for accurate length measurement
+    json_conversation = json.dumps(full_conversation)
+
+    if len(json_conversation) <= context_length:
+        # If the full conversation fits, return it as-is
+        return full_conversation
+
+    # Truncate based on the current round
+    if not history:  # First round, truncate FILO
+        while len(json.dumps(full_conversation)) > context_length:
+            full_conversation.pop(0)  # Remove from the start
+    else:  # Subsequent rounds, truncate FIFO
+        while len(json.dumps(full_conversation)) > context_length:
+            full_conversation.pop(-1)  # Remove from the end
+
+    return full_conversation
 
 
 def chat_with_models(
     user_input, model_alias, models, conversation_state, timeout=TIMEOUT
 ):
     model_name = models[model_alias]
-    truncated_input = truncate_prompt(user_input, model_alias, models)
+    truncated_input = truncate_prompt(user_input, model_alias, models, conversation_state)
     conversation_state.setdefault(model_name, []).append(
         {"role": "user", "content": user_input}
     )
@@ -81,7 +112,7 @@ def chat_with_models(
         try:
             response = client.chat.completions.create(
                 model=model_name,
-                messages=[{"role": "user", "content": truncated_input}],
+                messages=truncated_input,
             )
             model_response["content"] = response.choices[0].message.content
         except Exception as e:
