@@ -234,8 +234,8 @@ def get_leaderboard_data():
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
-                "PageRank Score",
                 "Newman Modularity Score",
+                "PageRank Score",
             ]
         )
 
@@ -308,8 +308,8 @@ def get_leaderboard_data():
             "Average Win Rate",
             "Bradley-Terry Coefficient",
             "Eigenvector Centrality Value",
-            "PageRank Score",
             "Newman Modularity Score",
+            "PageRank Score",
         ]
     ]
 
@@ -355,8 +355,8 @@ with gr.Blocks() as app:
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
-                "PageRank Score",
                 "Newman Modularity Score",
+                "PageRank Score",
             ],
         )
         # Add a citation block in Markdown
