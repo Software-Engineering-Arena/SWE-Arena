@@ -55,9 +55,6 @@ if len(available_models) < 2:
 models_state = {}
 conversation_state = {}
 
-# Define functions here
-
-
 # Truncate prompt
 def truncate_prompt(prompt, model_alias, models):
     model_name = models[model_alias]
@@ -167,7 +164,6 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
 
     try:
         api = HfApi()
-        print('here')
         # List all files in the repository
         repo_files = api.list_repo_files(repo_id=repo_name, repo_type="dataset")
 
