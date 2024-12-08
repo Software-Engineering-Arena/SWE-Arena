@@ -336,7 +336,7 @@ with gr.Blocks() as app:
             """
             # 🏆 Software Engineering Arena Leaderboard: Community-Driven Evaluation of Top SE Chatbots
 
-            The Software Engineering (SE) Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](https://arxiv.org/abs/your-paper-link).
+            The Software Engineering (SE) Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](TODO).
             """,
             elem_classes="leaderboard-intro",
         )
@@ -386,7 +386,7 @@ with gr.Blocks() as app:
         # Add Hugging Face Sign In button and message
         with gr.Row():
             # Define the markdown text with or without the hint string
-            markdown_text = "## Please sign in using the button on the right to vote!"
+            markdown_text = "## Please sign in first to vote!"
             if SHOW_HINT_STRING:
                 markdown_text += f"\n{HINT_STRING}"
             hint_markdown = gr.Markdown(markdown_text, elem_classes="markdown-text")
