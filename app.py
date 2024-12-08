@@ -6,35 +6,24 @@ import os
 import random
 import threading
 
-import aisuite as ai
 import gradio as gr
 import pandas as pd
 
 from huggingface_hub import upload_file, hf_hub_download, HfFolder, HfApi
 from datetime import datetime
 from gradio_leaderboard import Leaderboard
+from openai import OpenAI
 
 # Load environment variables
 dotenv.load_dotenv()
 
-# Retrieve the secret from the environment
-gcp_credentials = os.environ.get("GCP_CREDENTIALS")
+# Initialize OpenAI Client
+api_key = os.getenv("API_KEY")
+base_url = "https://api.pandalla.ai/v1"
+openai_client = OpenAI(api_key=api_key, base_url=base_url)
 
-# Write it to a file
-credentials_path = (
-    "/tmp/gcp_credentials.json"  # Ensure this path is secure and temporary
-)
-with open(credentials_path, "w") as f:
-    f.write(gcp_credentials)
-
-# Set the environment variable for GCP SDKs
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-# Timeout in seconds for model response
+# Timeout in seconds for model responses
 TIMEOUT = 60
-
-# Initialize AISuite Client
-client = ai.Client()
 
 # Hint string constant
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
@@ -75,7 +64,9 @@ def truncate_prompt(user_input, model_alias, models, conversation_state):
 
     # Get the full conversation history for the model
     history = conversation_state.get(model_name, [])
-    full_conversation = [{"role": msg["role"], "content": msg["content"]} for msg in history]
+    full_conversation = [
+        {"role": msg["role"], "content": msg["content"]} for msg in history
+    ]
     full_conversation.append({"role": "user", "content": user_input})
 
     # Convert to JSON string for accurate length measurement
@@ -100,7 +91,9 @@ def chat_with_models(
     user_input, model_alias, models, conversation_state, timeout=TIMEOUT
 ):
     model_name = models[model_alias]
-    truncated_input = truncate_prompt(user_input, model_alias, models, conversation_state)
+    truncated_input = truncate_prompt(
+        user_input, model_alias, models, conversation_state
+    )
     conversation_state.setdefault(model_name, []).append(
         {"role": "user", "content": user_input}
     )
@@ -110,10 +103,12 @@ def chat_with_models(
 
     def request_model_response():
         try:
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=truncated_input,
-            )
+            request_params = {
+                "model": model_name,
+                "messages": truncated_input,
+                "temperature": 0,
+            }
+            response = openai_client.chat.completions.create(**request_params)
             model_response["content"] = response.choices[0].message.content
         except Exception as e:
             model_response["error"] = f"{model_name} model is not available. Error: {e}"
@@ -128,15 +123,12 @@ def chat_with_models(
     response_event_occurred = response_event.wait(timeout)
 
     if not response_event_occurred:
-        # Timeout occurred, raise a TimeoutError to be handled in the Gradio interface
         raise TimeoutError(
             f"The {model_alias} model did not respond within {timeout} seconds."
         )
     elif model_response["error"]:
-        # An error occurred during model response
         raise Exception(model_response["error"])
     else:
-        # Successful response
         formatted_response = f"```\n{model_response['content']}\n```"
         conversation_state[model_name].append(
             {"role": "assistant", "content": model_response["content"]}
