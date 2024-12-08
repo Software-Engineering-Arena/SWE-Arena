@@ -4,10 +4,11 @@ emoji: 🛠️
 colorFrom: blue
 colorTo: purple
 sdk: gradio
-sdk_version: "5.7.1"
+sdk_version: 5.8.0
 app_file: app.py
 hf_oauth: true
 pinned: false
+short_description: The chatbot arena for software engineering
 ---
 
 # SE Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
