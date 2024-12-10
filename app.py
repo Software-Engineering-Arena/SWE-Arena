@@ -555,6 +555,9 @@ with gr.Blocks() as app:
                 gr.update(visible=False),  # Hide the timeout popup if it was visible
                 model_a_send_state,  # Set model_a_send button state
                 model_b_send_state,  # Set model_b_send button state
+                gr.update(
+                    visible=False
+                ),  # thanks_message - Make sure to return it as invisible here as well
             )
 
         # Feedback panel, initially hidden
@@ -566,6 +569,13 @@ with gr.Blocks() as app:
                 interactive=False,  # Initially not interactive
             )
             submit_feedback_btn = gr.Button("Submit Feedback", interactive=False)
+
+        thanks_message = gr.Markdown(
+            value="## Thanks for your vote!", visible=False
+        )  # Add thank you message
+
+        def hide_thanks_message():
+            return gr.update(visible=False)
 
         # Function to handle login
         def handle_login():
@@ -625,24 +635,27 @@ with gr.Blocks() as app:
 
         # First round handling
         send_first.click(
-            update_model_titles_and_responses,
+            fn=hide_thanks_message, inputs=[], outputs=[thanks_message]
+        ).then(
+            fn=update_model_titles_and_responses,
             inputs=[shared_input, models_state, conversation_state],
             outputs=[
-                shared_input,  # shared_input
-                user_prompt_md,  # user_prompt_md
-                response_a_title,  # response_a_title
-                response_b_title,  # response_b_title
-                response_a,  # response_a
-                response_b,  # response_b
-                multi_round_inputs,  # multi_round_inputs
-                vote_panel,  # vote_panel
-                send_first,  # send_first
-                feedback,  # feedback
-                models_state,  # models_state
-                conversation_state,  # conversation_state
-                timeout_popup,  # timeout_popup
-                model_a_send,  # model_a_send state
-                model_b_send,  # model_b_send state
+                shared_input,
+                user_prompt_md,
+                response_a_title,
+                response_b_title,
+                response_a,
+                response_b,
+                multi_round_inputs,
+                vote_panel,
+                send_first,
+                feedback,
+                models_state,
+                conversation_state,
+                timeout_popup,
+                model_a_send,
+                model_b_send,
+                thanks_message,
             ],
         )
 
@@ -762,7 +775,7 @@ with gr.Blocks() as app:
             return (
                 gr.update(
                     value="", interactive=True, visible=True
-                ),  # Clear and show shared_input
+                ),  # Clear shared_input
                 gr.update(value="", visible=False),  # Hide user_prompt_md
                 gr.update(value="", visible=False),  # Hide response_a_title
                 gr.update(value="", visible=False),  # Hide response_b_title
@@ -777,6 +790,7 @@ with gr.Blocks() as app:
                     value="Can't Decide", interactive=True
                 ),  # Reset feedback selection
                 leaderboard_data,  # Updated leaderboard data
+                gr.update(visible=True),  # Show the thanks message
             )
 
         # Update the click event for the submit feedback button
@@ -795,6 +809,7 @@ with gr.Blocks() as app:
                 send_first,  # Reset and update send_first button
                 feedback,  # Reset feedback selection
                 leaderboard_component,  # Update leaderboard data dynamically
+                thanks_message,  # Show the "Thanks for your vote!" message
             ],
         )
 
