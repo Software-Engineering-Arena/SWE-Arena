@@ -1,17 +1,20 @@
 import dotenv
 import evalica
+import gitlab
 import io
 import json
 import os
 import random
+import re
 import threading
 
 import gradio as gr
 import pandas as pd
 
-from huggingface_hub import upload_file, hf_hub_download, HfFolder, HfApi
 from datetime import datetime
+from github import Github
 from gradio_leaderboard import Leaderboard
+from huggingface_hub import upload_file, hf_hub_download, HfFolder, HfApi
 from openai import OpenAI
 
 # Load environment variables
@@ -43,6 +46,149 @@ if len(available_models) < 2:
 # Initialize global variables
 models_state = {}
 conversation_state = {}
+
+
+def fetch_github_content(url):
+    """Fetch detailed content from a GitHub URL using PyGithub."""
+    token = os.getenv("GITHUB_TOKEN")
+    if not token:
+        print("GITHUB_TOKEN not set.")
+        return None
+
+    g = Github(token)
+
+    try:
+        match = re.match(
+            r"https?://github\.com/([^/]+)/([^/]+)/(commit|pull|issues|discussions)/([a-z0-9]+)",
+            url,
+        )
+
+        if not match:
+            repo_part = re.match(r"https?://github\.com/([^/]+)/([^/]+)/?", url)
+            if repo_part:
+                owner, repo = repo_part.groups()
+                repo = g.get_repo(f"{owner}/{repo}")
+                try:
+                    readme = repo.get_readme()
+                    return readme.decoded_content.decode()
+                except:
+                    return repo.description
+            return None
+
+        owner, repo, category, identifier = match.groups()
+        repo = g.get_repo(f"{owner}/{repo}")
+
+        if category == "commit":
+            commit = repo.get_commit(identifier)
+            return commit.__dict__
+
+        elif category in ["pull", "issues"]:
+            obj = (
+                repo.get_pull(int(identifier))
+                if category == "pull"
+                else repo.get_issue(int(identifier))
+            )
+        return obj.__dict__
+
+    except Exception as e:
+        print(f"GitHub API error: {e}")
+        return None
+
+
+def fetch_gitlab_content(url):
+    """Fetch content from GitLab URL using python-gitlab."""
+    token = os.getenv("GITLAB_TOKEN")
+    if not token:
+        print("GITLAB_TOKEN not set.")
+        return None
+    gl = gitlab.Gitlab(private_token=token)
+
+    try:
+        match = re.match(
+            r"https?://gitlab\.com/([^/]+)/([^/]+)/-/?(commit|merge_requests|issues)/([^/]+)",
+            url,
+        )
+        if not match:
+            repo_part = re.match(r"https?://gitlab\.com/([^/]+)/([^/]+)/?", url)
+            if repo_part:
+                owner, repo = repo_part.groups()
+                project = gl.projects.get(f"{owner}/{repo}")
+                try:
+                    readme = project.files.get(file_path="README.md", ref="master")
+                    return readme.decode()
+                except gitlab.exceptions.GitlabGetError:
+                    return project.description
+            return None
+
+        owner, repo, category, identifier = match.groups()
+        project = gl.projects.get(f"{owner}/{repo}")
+
+        if category == "commit":
+            commit = project.commits.get(identifier)
+            return commit.__dict__
+
+        elif category == "merge_requests":
+            merge_request = project.mergerequests.get(int(identifier))
+            return merge_request.__dict__
+
+        elif category == "issues":
+            issue = project.issues.get(int(identifier))
+            return issue.__dict__
+
+    except Exception as e:
+        print(f"GitLab API error: {e}")
+        return None
+
+
+def fetch_huggingface_content(url):
+    """Fetch detailed content from a Hugging Face URL using huggingface_hub API."""
+    token = os.getenv("HF_TOKEN")
+    if not token:
+        print("HF_TOKEN not set.")
+        return None
+
+    api = HfApi(token=token)
+
+    try:
+        if "/commit/" in url:
+            commit_hash = url.split("/commit/")[-1]
+            repo_id = url.split("/commit/")[0].split("huggingface.co/")[-1]
+            commits = api.list_repo_commits(repo_id=repo_id, revision=commit_hash)
+            if commits:
+                commit = commits[0]
+                return commit.__dict__
+            return None
+
+        elif "/discussions/" in url:
+            discussion_num = int(url.split("/discussions/")[-1])
+            repo_id = url.split("/discussions/")[0].split("/huggingface.co/")[-1]
+            discussion = api.get_discussion_details(
+                repo_id=repo_id, discussion_num=discussion_num
+            )
+            return discussion.__dict__
+
+        else:
+            repo_id = url.split("huggingface.co/")[-1]
+            repo_info = api.repo_info(repo_id=repo_id)
+            return repo_info.__dict__
+
+    except Exception as e:
+        print(f"Hugging Face API error: {e}")
+    return None
+
+
+def fetch_url_content(url):
+    """Main URL content fetcher that routes to platform-specific handlers."""
+    try:
+        if "github.com" in url:
+            return fetch_github_content(url)
+        elif "gitlab.com" in url:
+            return fetch_gitlab_content(url)
+        elif "huggingface.co" in url:
+            return fetch_huggingface_content(url)
+    except Exception as e:
+        print(f"Error fetching URL content: {e}")
+    return None
 
 
 # Truncate prompt
@@ -334,9 +480,9 @@ with gr.Blocks() as app:
         # Add title and description as a Markdown component
         leaderboard_intro = gr.Markdown(
             """
-            # 🏆 Software Engineering Arena Leaderboard: Community-Driven Evaluation of Top SE Chatbots
+            # 🏆 Software Engineering (SE) Chatbot Leaderboard: Community-Driven Evaluation of Top SE Chatbots
 
-            The Software Engineering (SE) Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](TODO).
+            The SE Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](TODO).
             """,
             elem_classes="leaderboard-intro",
         )
@@ -375,7 +521,7 @@ with gr.Blocks() as app:
             # ⚔️ Software Engineering (SE) Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
 
             ## 📜How It Works
-            - **Blind Comparison**: Submit a software engineering-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models, including ChatGPT, Gemini, Claude, Llama, and others.
+            - **Blind Comparison**: Submit a SE-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models, including ChatGPT, Gemini, Claude, Llama, and others.
             - **Interactive Voting**: Engage in multi-turn dialogues with both chatbots and compare their responses. You can continue the conversation until you confidently choose the better model.
             - **Fair Play Rules**: Votes are counted only if chatbot identities remain anonymous. Revealing a chatbot's identity disqualifies the session.
 
@@ -393,10 +539,19 @@ with gr.Blocks() as app:
             login_button = gr.Button(
                 "Sign in with Hugging Face", elem_id="oauth-button"
             )
-
+        
+        # NEW: Add a textbox for the repository URL above the user prompt
+        repo_url = gr.Textbox(
+            show_label=False,
+            placeholder="Enter the repo-related URL here (optional)",
+            lines=1,
+            interactive=False,
+        )
+        
         # Components with initial non-interactive state
         shared_input = gr.Textbox(
-            label="Enter your prompt for both models",
+            show_label=False,
+            placeholder="Enter your query for both models here",
             lines=2,
             interactive=False,  # Initially non-interactive
         )
@@ -441,6 +596,9 @@ with gr.Blocks() as app:
             model_b_input_state = gr.update(interactive=True)
             model_b_send_state = toggle_submit_button(model_b_input.value)
 
+            # Keep repo_url in sync with shared_input
+            repo_url_state = gr.update(interactive=True)
+
             return (
                 gr.update(visible=False),  # Hide the timeout popup
                 shared_input_state,  # Update shared_input
@@ -449,6 +607,7 @@ with gr.Blocks() as app:
                 model_a_send_state,  # Update model_a_send button
                 model_b_input_state,  # Update model_b_input
                 model_b_send_state,  # Update model_b_send button
+                repo_url_state,  # Update repo_url button
             )
 
         # Multi-round inputs, initially hidden
@@ -483,13 +642,17 @@ with gr.Blocks() as app:
                 model_a_send,
                 model_b_input,
                 model_b_send,
+                repo_url,
             ],
         )
 
         # Function to update model titles and responses
         def update_model_titles_and_responses(
-            user_input, models_state, conversation_state
+            repo_info, user_input, models_state, conversation_state
         ):
+            # Combine repo-related information (if any) and user query into one prompt.
+            combined_user_input = f"Repo-related Information: {fetch_url_content(repo_info)}\n\n{user_input}" if repo_info else user_input
+
             # Dynamically select two random models
             if len(available_models) < 2:
                 raise ValueError(
@@ -506,10 +669,10 @@ with gr.Blocks() as app:
 
             try:
                 response_a = chat_with_models(
-                    user_input, "Model A", models_state, conversation_state
+                    combined_user_input, "Model A", models_state, conversation_state
                 )
                 response_b = chat_with_models(
-                    user_input, "Model B", models_state, conversation_state
+                    combined_user_input, "Model B", models_state, conversation_state
                 )
             except TimeoutError as e:
                 # Handle the timeout by resetting components, showing a popup, and disabling inputs
@@ -517,6 +680,9 @@ with gr.Blocks() as app:
                     gr.update(
                         value="", interactive=False, visible=True
                     ),  # Disable shared_input
+                    gr.update(
+                        value="", interactive=False, visible=True
+                    ),  # Disable repo_url
                     gr.update(value="", visible=False),  # Hide user_prompt_md
                     gr.update(value="", visible=False),  # Hide Model A title
                     gr.update(value="", visible=False),  # Hide Model B title
@@ -539,8 +705,9 @@ with gr.Blocks() as app:
 
             return (
                 gr.update(visible=False),  # Hide shared_input
+                gr.update(visible=False),  # Hide repo_url the same way
                 gr.update(
-                    value=f"**Your Prompt:**\n\n{user_input}", visible=True
+                    value=f"**Your Query:**\n\n{user_input}", visible=True
                 ),  # Show user_prompt_md
                 gr.update(value=f"### Model A:", visible=True),
                 gr.update(value=f"### Model B:", visible=True),
@@ -597,6 +764,7 @@ with gr.Blocks() as app:
                 # If token is successfully retrieved, update the interface state
                 return (
                     gr.update(visible=False),  # Hide the login button
+                    gr.update(interactive=True),  # repo_url -> Enable in sync
                     gr.update(interactive=True),  # Enable shared_input
                     gr.update(
                         interactive=False
@@ -610,6 +778,7 @@ with gr.Blocks() as app:
                 print(f"Login failed: {e}")
                 return (
                     gr.update(visible=True),  # Keep the login button visible
+                    gr.update(interactive=False), # repo_url -> disable if login failed
                     gr.update(interactive=False),  # Keep shared_input disabled
                     gr.update(interactive=False),  # Keep send_first disabled
                     gr.update(
@@ -625,6 +794,7 @@ with gr.Blocks() as app:
             inputs=[],
             outputs=[
                 login_button,  # Hide the login button after successful login
+                repo_url,      # Keep this in sync with shared_input
                 shared_input,  # Enable shared_input
                 send_first,  # Enable send_first button
                 feedback,  # Enable feedback radio buttons
@@ -638,9 +808,10 @@ with gr.Blocks() as app:
             fn=hide_thanks_message, inputs=[], outputs=[thanks_message]
         ).then(
             fn=update_model_titles_and_responses,
-            inputs=[shared_input, models_state, conversation_state],
+            inputs=[repo_url, shared_input, models_state, conversation_state],
             outputs=[
                 shared_input,
+                repo_url,
                 user_prompt_md,
                 response_a_title,
                 response_b_title,
@@ -776,6 +947,9 @@ with gr.Blocks() as app:
                 gr.update(
                     value="", interactive=True, visible=True
                 ),  # Clear shared_input
+                gr.update(
+                    value="", interactive=True, visible=True
+                ),  # Clear repo_url
                 gr.update(value="", visible=False),  # Hide user_prompt_md
                 gr.update(value="", visible=False),  # Hide response_a_title
                 gr.update(value="", visible=False),  # Hide response_b_title
@@ -791,6 +965,7 @@ with gr.Blocks() as app:
                 ),  # Reset feedback selection
                 leaderboard_data,  # Updated leaderboard data
                 gr.update(visible=True),  # Show the thanks message
+                gr.update(value="", interactive=True, visible=True),  # Show the repo-related url message
             )
 
         # Update the click event for the submit feedback button
@@ -799,6 +974,7 @@ with gr.Blocks() as app:
             inputs=[feedback, models_state, conversation_state],
             outputs=[
                 shared_input,  # Reset shared_input
+                repo_url,   # Show the repo-related URL message
                 user_prompt_md,  # Hide user_prompt_md
                 response_a_title,  # Hide Model A title
                 response_b_title,  # Hide Model B title

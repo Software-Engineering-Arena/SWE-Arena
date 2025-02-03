@@ -1,7 +1,8 @@
-aisuite[all]
 evalica
 gradio[oauth]
 gradio_leaderboard
 huggingface_hub
+PyGithub
 python-dotenv
+python-gitlab
 vertexai
