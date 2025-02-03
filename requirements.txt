@@ -2,6 +2,7 @@ evalica
 gradio[oauth]
 gradio_leaderboard
 huggingface_hub
+openai
 PyGithub
 python-dotenv
 python-gitlab
