@@ -11,7 +11,7 @@ pinned: false
 short_description: The chatbot arena for software engineering
 ---
 
-# SE Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
+# SE Arena: Evaluate Best SE Chatbots with Long-Context Interactions
 
 Welcome to **SE Arena**, an open-source platform designed for evaluating software engineering-focused chatbots. SE Arena benchmarks foundation models (FMs), such as large language models (LLMs), in iterative, context-rich workflows that are characteristic of software engineering (SE) tasks.
 
