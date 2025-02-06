@@ -509,9 +509,15 @@ with gr.Blocks() as app:
         citation_component = gr.Markdown(
             """
             Made with ❤️ for SE Arena. If this work is useful to you, please consider citing:
-            ```
-            [TODO]
-            ```
+            ```@misc{zhao2025searenabenchmarkingsoftware,
+            title={SE Arena: Benchmarking Software Engineering Chatbots with Iterative Interactions}, 
+            author={Zhimin Zhao},
+            year={2025},
+            eprint={2502.01860},
+            archivePrefix={arXiv},
+            primaryClass={cs.SE},
+            url={https://arxiv.org/abs/2502.01860}, 
+            }```
             """
         )
     with gr.Tab("⚔️Arena"):
