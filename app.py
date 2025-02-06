@@ -482,7 +482,7 @@ with gr.Blocks() as app:
             """
             # 🏆 Software Engineering (SE) Chatbot Leaderboard: Community-Driven Evaluation of Top SE Chatbots
 
-            The SE Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](TODO).
+            The SE Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
             """,
             elem_classes="leaderboard-intro",
         )
