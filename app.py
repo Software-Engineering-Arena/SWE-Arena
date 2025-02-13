@@ -550,7 +550,7 @@ with gr.Blocks() as app:
         # NEW: Add a textbox for the repository URL above the user prompt
         repo_url = gr.Textbox(
             show_label=False,
-            placeholder="Enter the repo-related URL here (optional)",
+            placeholder="Optional: Enter the URL of a repository (GitHub, GitLab, Hugging Face), issue, commit, or pull request.",
             lines=1,
             interactive=False,
         )
@@ -558,7 +558,7 @@ with gr.Blocks() as app:
         # Components with initial non-interactive state
         shared_input = gr.Textbox(
             show_label=False,
-            placeholder="Enter your query for both models here",
+            placeholder="Enter your query for both models here.",
             lines=2,
             interactive=False,  # Initially non-interactive
         )
