@@ -369,6 +369,7 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
 
 
 def get_leaderboard_data():
+    global leaderboard_data
     if leaderboard_data is None:
         # Load feedback data from the Hugging Face repository
         try:
