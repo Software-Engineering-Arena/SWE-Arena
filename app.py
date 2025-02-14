@@ -26,7 +26,7 @@ base_url = "https://api.pandalla.ai/v1"
 openai_client = OpenAI(api_key=api_key, base_url=base_url)
 
 # Timeout in seconds for model responses
-TIMEOUT = 60
+TIMEOUT = 90
 
 # Hint string constant
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
@@ -532,7 +532,7 @@ with gr.Blocks() as app:
             - **Interactive Voting**: Engage in multi-turn dialogues with both chatbots and compare their responses. You can continue the conversation until you confidently choose the better model.
             - **Fair Play Rules**: Votes are counted only if chatbot identities remain anonymous. Revealing a chatbot's identity disqualifies the session.
 
-            **Note:** Due to budget constraints, responses that take longer than one minute to generate will be discarded.
+            **Note:** Due to budget constraints, responses that take longer than {TIMEOUT} seconds to generate will be discarded.
             """,
             elem_classes="arena-intro",
         )
