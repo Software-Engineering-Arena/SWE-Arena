@@ -28,6 +28,9 @@ openai_client = OpenAI(api_key=api_key, base_url=base_url)
 # Timeout in seconds for model responses
 TIMEOUT = 90
 
+# leaderboard data
+leaderboard_data = None
+
 # Hint string constant
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
 HINT_STRING = "Once signed in, your votes will be recorded securely."
@@ -282,7 +285,7 @@ def chat_with_models(
         return formatted_response
 
 
-def save_content_to_hf(content, repo_name):
+def save_content_to_hf(feedback_data, repo_name):
     """
     Save feedback content to Hugging Face repository organized by month and year.
 
@@ -291,13 +294,8 @@ def save_content_to_hf(content, repo_name):
         month_year (str): Year and month string in the format "YYYY_MM".
         repo_name (str): Hugging Face repository name.
     """
-    # Ensure the user is authenticated with HF
-    token = HfFolder.get_token()
-    if token is None:
-        raise ValueError("Please log in to Hugging Face using `huggingface-cli login`.")
-
     # Serialize the content to JSON and encode it as bytes
-    json_content = json.dumps(content, indent=4).encode("utf-8")
+    json_content = json.dumps(feedback_data, indent=4).encode("utf-8")
 
     # Create a binary file-like object
     file_like_object = io.BytesIO(json_content)
@@ -308,6 +306,11 @@ def save_content_to_hf(content, repo_name):
 
     # Define the path in the repository
     filename = f"{month_year}/{day_hour_minute_second}.json"
+
+    # Ensure the user is authenticated with HF
+    token = HfFolder.get_token()
+    if token is None:
+        raise ValueError("Please log in to Hugging Face using `huggingface-cli login`.")
 
     # Upload to Hugging Face repository
     upload_file(
@@ -340,15 +343,15 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
         repo_files = api.list_repo_files(repo_id=repo_name, repo_type="dataset")
 
         # Filter files by current year and month
-        feedback_files = [file for file in repo_files if year_month in file]
+        leaderboard_files = [file for file in repo_files if year_month in file]
 
-        if not feedback_files:
+        if not leaderboard_files:
             raise FileNotFoundError(
                 f"No feedback files found for {year_month} in {repo_name}."
             )
 
         # Download and aggregate data
-        for file in feedback_files:
+        for file in leaderboard_files:
             local_path = hf_hub_download(
                 repo_id=repo_name, filename=file, repo_type="dataset"
             )
@@ -366,100 +369,85 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
 
 
 def get_leaderboard_data():
-    # Load feedback data from the Hugging Face repository
-    try:
-        feedback_data = load_content_from_hf()
-        feedback_df = pd.DataFrame(feedback_data)
-    except:
-        # If no feedback exists, return an empty DataFrame
-        return pd.DataFrame(
-            columns=[
-                "Rank",
-                "Model",
-                "Elo Score",
-                "Average Win Rate",
-                "Bradley-Terry Coefficient",
-                "Eigenvector Centrality Value",
-                "Newman Modularity Score",
-                "PageRank Score",
-            ]
-        )
+    if leaderboard_data is None:
+        # Load feedback data from the Hugging Face repository
+        try:
+            feedback_data = load_content_from_hf()
+            feedback_df = pd.DataFrame(feedback_data)
 
-    feedback_df["winner"] = feedback_df["winner"].map(
-        {
-            "left": evalica.Winner.X,
-            "right": evalica.Winner.Y,
-            "tie": evalica.Winner.Draw,
-        }
-    )
+            # map vote to winner
+            feedback_df["winner"] = feedback_df["winner"].map(
+                {
+                    "left": evalica.Winner.X,
+                    "right": evalica.Winner.Y,
+                    "tie": evalica.Winner.Draw,
+                }
+            )
 
-    # Calculate scores using various metrics
-    avr_result = evalica.average_win_rate(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    bt_result = evalica.bradley_terry(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    newman_result = evalica.newman(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    eigen_result = evalica.eigen(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    elo_result = evalica.elo(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    pagerank_result = evalica.pagerank(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
+            # Calculate scores using various metrics
+            avr_result = evalica.average_win_rate(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
+            bt_result = evalica.bradley_terry(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
+            newman_result = evalica.newman(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
+            eigen_result = evalica.eigen(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
+            elo_result = evalica.elo(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
+            pagerank_result = evalica.pagerank(
+                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+            )
 
-    # Combine all results into a single DataFrame
-    ranking_df = pd.DataFrame(
-        {
-            "Model": elo_result.scores.index,
-            "Elo Score": elo_result.scores.values,
-            "Average Win Rate": avr_result.scores.values * 100,
-            "Bradley-Terry Coefficient": bt_result.scores.values,
-            "Eigenvector Centrality Value": eigen_result.scores.values,
-            "PageRank Score": pagerank_result.scores.values,
-            "Newman Modularity Score": newman_result.scores.values,
-        }
-    )
+            # Combine all results into a single DataFrame
+            leaderboard_data = pd.DataFrame(
+                {
+                    "Model": elo_result.scores.index,
+                    "Elo Score": elo_result.scores.values,
+                    "Average Win Rate": avr_result.scores.values * 100,
+                    "Bradley-Terry Coefficient": bt_result.scores.values,
+                    "Eigenvector Centrality Value": eigen_result.scores.values,
+                    "Newman Modularity Score": newman_result.scores.values,
+                    "PageRank Score": pagerank_result.scores.values,
+                }
+            )
 
-    # Add a Rank column based on Elo scores
-    ranking_df["Rank"] = (
-        ranking_df["Elo Score"].rank(ascending=False, method="min").astype(int)
-    )
+            # Round all numeric columns to two decimal places
+            leaderboard_data = leaderboard_data.round(
+                {
+                    "Elo Score": 2,
+                    "Average Win Rate": 2,
+                    "Bradley-Terry Coefficient": 2,
+                    "Eigenvector Centrality Value": 2,
+                    "Newman Modularity Score": 2,
+                    "PageRank Score": 2,
+                }
+            )
 
-    # Round all numeric columns to two decimal places
-    ranking_df = ranking_df.round(
-        {
-            "Elo Score": 2,
-            "Average Win Rate": 2,
-            "Bradley-Terry Coefficient": 2,
-            "Eigenvector Centrality Value": 2,
-            "PageRank Score": 2,
-            "Newman Modularity Score": 2,
-        }
-    )
-
-    # Reorder columns to make 'Rank' the first column
-    ranking_df = ranking_df.sort_values(by="Rank").reset_index(drop=True)
-
-    ranking_df = ranking_df[
-        [
-            "Rank",
-            "Model",
-            "Elo Score",
-            "Average Win Rate",
-            "Bradley-Terry Coefficient",
-            "Eigenvector Centrality Value",
-            "Newman Modularity Score",
-            "PageRank Score",
-        ]
-    ]
-
-    return ranking_df
+            # Add a Rank column based on Elo scores
+            leaderboard_data["Rank"] = (
+                leaderboard_data["Elo Score"].rank(ascending=False).astype(int)
+            )
+        except:
+            # If no feedback exists, return an empty DataFrame
+            return pd.DataFrame(
+                    columns=[
+                        "Rank",
+                        "Model",
+                        "Elo Score",
+                        "Average Win Rate",
+                        "Bradley-Terry Coefficient",
+                        "Eigenvector Centrality Value",
+                        "Newman Modularity Score",
+                        "PageRank Score",
+                    ]
+                )
+    return leaderboard_data
 
 
 # Function to enable or disable submit buttons based on textbox content
@@ -916,9 +904,6 @@ with gr.Blocks() as app:
         )
 
         def submit_feedback(vote, models_state, conversation_state):
-            # Get current timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
             # Map vote to actual model names
             match vote:
                 case "Model A":
@@ -933,8 +918,11 @@ with gr.Blocks() as app:
                 "left": models_state["Model A"],
                 "right": models_state["Model B"],
                 "winner": winner_model,
-                "timestamp": timestamp,
+                "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
             }
+
+            # Concatenate the new feedback with the existing leaderboard data
+            leaderboard_data = pd.concat([get_leaderboard_data(), pd.DataFrame([feedback_entry])], ignore_index=True)
 
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(feedback_entry, "SE-Arena/votes")
@@ -945,9 +933,6 @@ with gr.Blocks() as app:
             # Clear state
             models_state.clear()
             conversation_state.clear()
-
-            # Recalculate leaderboard
-            leaderboard_data = get_leaderboard_data()
 
             # Adjust output count to match the interface definition
             return (
