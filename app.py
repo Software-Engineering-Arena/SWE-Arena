@@ -434,6 +434,9 @@ def get_leaderboard_data():
             leaderboard_data["Rank"] = (
                 leaderboard_data["Elo Score"].rank(ascending=False).astype(int)
             )
+
+            # Place rank in the first column
+            leaderboard_data = leaderboard_data[["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]]
         except:
             # If no feedback exists, return an empty DataFrame
             return pd.DataFrame(
