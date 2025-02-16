@@ -7,6 +7,7 @@
     "gpt-4o-mini": 128000,
     "claude-3-5-sonnet-latest" : 200000,
     "deepseek-chat": 64000,
+    "deepseek-r1": 64000,
     "gemini-1.5-flash-latest": 1048576,
     "gemini-1.5-pro-latest": 2097152,
     "Hunyuan-A52B-Instruct": 128000,
