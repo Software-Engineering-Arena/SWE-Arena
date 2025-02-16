@@ -254,8 +254,7 @@ def chat_with_models(
         try:
             request_params = {
                 "model": model_name,
-                "messages": truncated_input,
-                "temperature": 0,
+                "messages": truncated_input
             }
             response = openai_client.chat.completions.create(**request_params)
             model_response["content"] = response.choices[0].message.content
