@@ -19,7 +19,6 @@ Welcome to **SE Arena**, an open-source platform designed for evaluating softwar
 
 - **Advanced Pairwise Comparisons**: Assess chatbots using Elo score, PageRank, and Newman modularity to understand both global performance and task-specific strengths.
 - **Interactive Evaluation**: Test chatbots in multi-round conversations tailored for SE tasks like debugging, code generation, and requirement refinement.
-- **Open-Source**: Built on [Hugging Face Spaces](https://huggingface.co/spaces/SE-Arena/Software-Engineering-Arena), enabling transparency and fostering community-driven innovation.
 - **Transparent Leaderboard**: View real-time model rankings across diverse SE workflows, updated using advanced evaluation metrics.
 
 ## Why SE Arena?
