@@ -286,12 +286,7 @@ def chat_with_models(
 
 def save_content_to_hf(feedback_data, repo_name):
     """
-    Save feedback content to Hugging Face repository organized by month and year.
-
-    Args:
-        content (dict): Feedback data to be saved.
-        month_year (str): Year and month string in the format "YYYY_MM".
-        repo_name (str): Hugging Face repository name.
+    Save feedback content to Hugging Face repository organized by quarter.
     """
     # Serialize the content to JSON and encode it as bytes
     json_content = json.dumps(feedback_data, indent=4).encode("utf-8")
@@ -299,12 +294,14 @@ def save_content_to_hf(feedback_data, repo_name):
     # Create a binary file-like object
     file_like_object = io.BytesIO(json_content)
 
-    # Get the current year and month
-    month_year = datetime.now().strftime("%Y_%m")
-    day_hour_minute_second = datetime.now().strftime("%d_%H%M%S")
+    # Get the current year and quarter
+    now = datetime.now()
+    quarter = (now.month - 1) // 3 + 1
+    year_quarter = f"{now.year}_Q{quarter}"
+    day_hour_minute_second = now.strftime("%d_%H%M%S")
 
     # Define the path in the repository
-    filename = f"{month_year}/{day_hour_minute_second}.json"
+    filename = f"{year_quarter}/{day_hour_minute_second}.json"
 
     # Ensure the user is authenticated with HF
     token = HfFolder.get_token()
@@ -323,7 +320,7 @@ def save_content_to_hf(feedback_data, repo_name):
 
 def load_content_from_hf(repo_name="SE-Arena/votes"):
     """
-    Read feedback content from a Hugging Face repository based on the current month and year.
+    Read feedback content from a Hugging Face repository based on the current quarter.
 
     Args:
         repo_name (str): Hugging Face repository name.
@@ -331,10 +328,12 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
     Returns:
         list: Aggregated feedback data read from the repository.
     """
-
-    # Get the current year and month
-    year_month = datetime.now().strftime("%Y_%m")
     feedback_data = []
+
+    # Get the current year and quarter
+    now = datetime.now()
+    quarter = (now.month - 1) // 3 + 1
+    year_quarter = f"{now.year}_Q{quarter}"
 
     try:
         api = HfApi()
@@ -342,11 +341,11 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
         repo_files = api.list_repo_files(repo_id=repo_name, repo_type="dataset")
 
         # Filter files by current year and month
-        leaderboard_files = [file for file in repo_files if year_month in file]
+        leaderboard_files = [file for file in repo_files if year_quarter in file]
 
         if not leaderboard_files:
             raise FileNotFoundError(
-                f"No feedback files found for {year_month} in {repo_name}."
+                f"No feedback files found for {year_quarter} in {repo_name}."
             )
 
         # Download and aggregate data
