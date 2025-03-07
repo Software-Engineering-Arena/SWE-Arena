@@ -28,9 +28,6 @@ openai_client = OpenAI(api_key=api_key, base_url=base_url)
 # Timeout in seconds for model responses
 TIMEOUT = 90
 
-# leaderboard data
-leaderboard_data = None
-
 # Hint string constant
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
 HINT_STRING = "Once signed in, your votes will be recorded securely."
@@ -252,10 +249,7 @@ def chat_with_models(
 
     def request_model_response():
         try:
-            request_params = {
-                "model": model_name,
-                "messages": truncated_input
-            }
+            request_params = {"model": model_name, "messages": truncated_input}
             response = openai_client.chat.completions.create(**request_params)
             model_response["content"] = response.choices[0].message.content
         except Exception as e:
@@ -366,89 +360,94 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
         raise Exception("Error loading feedback data from Hugging Face repository.")
 
 
-def get_leaderboard_data():
-    global leaderboard_data
-    if leaderboard_data is None:
-        # Load feedback data from the Hugging Face repository
-        try:
-            feedback_data = load_content_from_hf()
-            feedback_df = pd.DataFrame(feedback_data)
+def get_leaderboard_data(feedback_entry=None):
+    # Load feedback data from the Hugging Face repository
+    feedback_data = load_content_from_hf()
+    feedback_df = pd.DataFrame(feedback_data)
 
-            # map vote to winner
-            feedback_df["winner"] = feedback_df["winner"].map(
-                {
-                    "left": evalica.Winner.X,
-                    "right": evalica.Winner.Y,
-                    "tie": evalica.Winner.Draw,
-                }
-            )
+    # Concatenate the new feedback with the existing leaderboard data
+    if feedback_entry is not None:
+        feedback_df = pd.concat(
+            [feedback_df, pd.DataFrame([feedback_entry])], ignore_index=True
+        )
 
-            # Calculate scores using various metrics
-            avr_result = evalica.average_win_rate(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
-            bt_result = evalica.bradley_terry(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
-            newman_result = evalica.newman(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
-            eigen_result = evalica.eigen(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
-            elo_result = evalica.elo(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
-            pagerank_result = evalica.pagerank(
-                feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-            )
+    if feedback_df.empty():
+        return pd.DataFrame(
+            columns=[
+                "Rank",
+                "Model",
+                "Elo Score",
+                "Average Win Rate",
+                "Bradley-Terry Coefficient",
+                "Eigenvector Centrality Value",
+                "Newman Modularity Score",
+                "PageRank Score",
+            ]
+        )
 
-            # Combine all results into a single DataFrame
-            leaderboard_data = pd.DataFrame(
-                {
-                    "Model": elo_result.scores.index,
-                    "Elo Score": elo_result.scores.values,
-                    "Average Win Rate": avr_result.scores.values * 100,
-                    "Bradley-Terry Coefficient": bt_result.scores.values,
-                    "Eigenvector Centrality Value": eigen_result.scores.values,
-                    "Newman Modularity Score": newman_result.scores.values,
-                    "PageRank Score": pagerank_result.scores.values,
-                }
-            )
+    # map vote to winner
+    feedback_df["winner"] = feedback_df["winner"].map(
+        {
+            "left": evalica.Winner.X,
+            "right": evalica.Winner.Y,
+            "tie": evalica.Winner.Draw,
+        }
+    )
 
-            # Round all numeric columns to two decimal places
-            leaderboard_data = leaderboard_data.round(
-                {
-                    "Elo Score": 2,
-                    "Average Win Rate": 2,
-                    "Bradley-Terry Coefficient": 2,
-                    "Eigenvector Centrality Value": 2,
-                    "Newman Modularity Score": 2,
-                    "PageRank Score": 2,
-                }
-            )
+    # Calculate scores using various metrics
+    avr_result = evalica.average_win_rate(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
+    bt_result = evalica.bradley_terry(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
+    newman_result = evalica.newman(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
+    eigen_result = evalica.eigen(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
+    elo_result = evalica.elo(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
+    pagerank_result = evalica.pagerank(
+        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+    )
 
-            # Add a Rank column based on Elo scores
-            leaderboard_data["Rank"] = (
-                leaderboard_data["Elo Score"].rank(ascending=False).astype(int)
-            )
+    # Combine all results into a single DataFrame
+    leaderboard_data = pd.DataFrame(
+        {
+            "Model": elo_result.scores.index,
+            "Elo Score": elo_result.scores.values,
+            "Average Win Rate": avr_result.scores.values * 100,
+            "Bradley-Terry Coefficient": bt_result.scores.values,
+            "Eigenvector Centrality Value": eigen_result.scores.values,
+            "Newman Modularity Score": newman_result.scores.values,
+            "PageRank Score": pagerank_result.scores.values,
+        }
+    )
 
-            # Place rank in the first column
-            leaderboard_data = leaderboard_data[["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]]
-        except:
-            # If no feedback exists, return an empty DataFrame
-            return pd.DataFrame(
-                    columns=[
-                        "Rank",
-                        "Model",
-                        "Elo Score",
-                        "Average Win Rate",
-                        "Bradley-Terry Coefficient",
-                        "Eigenvector Centrality Value",
-                        "Newman Modularity Score",
-                        "PageRank Score",
-                    ]
-                )
+    # Round all numeric columns to two decimal places
+    leaderboard_data = leaderboard_data.round(
+        {
+            "Elo Score": 2,
+            "Average Win Rate": 2,
+            "Bradley-Terry Coefficient": 2,
+            "Eigenvector Centrality Value": 2,
+            "Newman Modularity Score": 2,
+            "PageRank Score": 2,
+        }
+    )
+
+    # Add a Rank column based on Elo scores
+    leaderboard_data["Rank"] = (
+        leaderboard_data["Elo Score"].rank(ascending=False).astype(int)
+    )
+
+    # Place rank in the first column
+    leaderboard_data = leaderboard_data[
+        ["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]
+    ]
     return leaderboard_data
 
 
@@ -536,7 +535,7 @@ with gr.Blocks() as app:
             login_button = gr.Button(
                 "Sign in with Hugging Face", elem_id="oauth-button"
             )
-        
+
         # NEW: Add a textbox for the repository URL above the user prompt
         repo_url = gr.Textbox(
             show_label=False,
@@ -544,7 +543,7 @@ with gr.Blocks() as app:
             lines=1,
             interactive=False,
         )
-        
+
         # Components with initial non-interactive state
         shared_input = gr.Textbox(
             show_label=False,
@@ -648,7 +647,11 @@ with gr.Blocks() as app:
             repo_info, user_input, models_state, conversation_state
         ):
             # Combine repo-related information (if any) and user query into one prompt.
-            combined_user_input = f"Repo-related Information: {fetch_url_content(repo_info)}\n\n{user_input}" if repo_info else user_input
+            combined_user_input = (
+                f"Repo-related Information: {fetch_url_content(repo_info)}\n\n{user_input}"
+                if repo_info
+                else user_input
+            )
 
             # Dynamically select two random models
             if len(available_models) < 2:
@@ -775,7 +778,7 @@ with gr.Blocks() as app:
                 print(f"Login failed: {e}")
                 return (
                     gr.update(visible=True),  # Keep the login button visible
-                    gr.update(interactive=False), # repo_url -> disable if login failed
+                    gr.update(interactive=False),  # repo_url -> disable if login failed
                     gr.update(interactive=False),  # Keep shared_input disabled
                     gr.update(interactive=False),  # Keep send_first disabled
                     gr.update(
@@ -791,7 +794,7 @@ with gr.Blocks() as app:
             inputs=[],
             outputs=[
                 login_button,  # Hide the login button after successful login
-                repo_url,      # Keep this in sync with shared_input
+                repo_url,  # Keep this in sync with shared_input
                 shared_input,  # Enable shared_input
                 send_first,  # Enable send_first button
                 feedback,  # Enable feedback radio buttons
@@ -923,10 +926,7 @@ with gr.Blocks() as app:
                 "winner": winner_model,
                 "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
             }
-
-            # Concatenate the new feedback with the existing leaderboard data
-            leaderboard_data = pd.concat([get_leaderboard_data(), pd.DataFrame([feedback_entry])], ignore_index=True)
-
+            
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(feedback_entry, "SE-Arena/votes")
 
@@ -942,9 +942,7 @@ with gr.Blocks() as app:
                 gr.update(
                     value="", interactive=True, visible=True
                 ),  # Clear shared_input
-                gr.update(
-                    value="", interactive=True, visible=True
-                ),  # Clear repo_url
+                gr.update(value="", interactive=True, visible=True),  # Clear repo_url
                 gr.update(value="", visible=False),  # Hide user_prompt_md
                 gr.update(value="", visible=False),  # Hide response_a_title
                 gr.update(value="", visible=False),  # Hide response_b_title
@@ -958,9 +956,11 @@ with gr.Blocks() as app:
                 gr.update(
                     value="Can't Decide", interactive=True
                 ),  # Reset feedback selection
-                leaderboard_data,  # Updated leaderboard data
+                get_leaderboard_data(feedback_entry),  # Updated leaderboard data
                 gr.update(visible=True),  # Show the thanks message
-                gr.update(value="", interactive=True, visible=True),  # Show the repo-related url message
+                gr.update(
+                    value="", interactive=True, visible=True
+                ),  # Show the repo-related url message
             )
 
         # Update the click event for the submit feedback button
@@ -969,7 +969,7 @@ with gr.Blocks() as app:
             inputs=[feedback, models_state, conversation_state],
             outputs=[
                 shared_input,  # Reset shared_input
-                repo_url,   # Show the repo-related URL message
+                repo_url,  # Show the repo-related URL message
                 user_prompt_md,  # Hide user_prompt_md
                 response_a_title,  # Hide Model A title
                 response_b_title,  # Hide Model B title
