@@ -371,7 +371,7 @@ def get_leaderboard_data(feedback_entry=None):
             [feedback_df, pd.DataFrame([feedback_entry])], ignore_index=True
         )
 
-    if feedback_df.empty():
+    if feedback_df.empty:
         return pd.DataFrame(
             columns=[
                 "Rank",
@@ -926,7 +926,7 @@ with gr.Blocks() as app:
                 "winner": winner_model,
                 "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
             }
-            
+
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(feedback_entry, "SE-Arena/votes")
 
