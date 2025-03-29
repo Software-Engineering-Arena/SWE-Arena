@@ -188,7 +188,7 @@ def fetch_url_content(url):
             return fetch_huggingface_content(url)
     except Exception as e:
         print(f"Error fetching URL content: {e}")
-    return None
+    return ''
 
 
 # Truncate prompt
@@ -536,6 +536,8 @@ with gr.Blocks() as app:
                 "Sign in with Hugging Face", elem_id="oauth-button"
             )
 
+        guardrail_message = gr.Markdown("", visible=False, elem_id="guardrail-message")
+
         # NEW: Add a textbox for the repository URL above the user prompt
         repo_url = gr.Textbox(
             show_label=False,
@@ -642,13 +644,90 @@ with gr.Blocks() as app:
             ],
         )
 
+        def guardrail_check_se_relevance(user_prompt):
+            """
+            Use GPT-3.5-turbo to check if the user_prompt is SE-related.
+            Return True if it is SE-related, otherwise False.
+            """
+            # Example instructions for classification — adjust to your needs
+            system_message = {
+                "role": "system",
+                "content": (
+                    "You are a classifier that decides if a user's question is relevant to software engineering. "
+                    "If the question is about software engineering concepts, tools, processes, or code, respond with 'Yes'. "
+                    "Otherwise, respond with 'No'."
+                ),
+            }
+            user_message = {"role": "user", "content": user_prompt}
+
+            try:
+                # Make the chat completion call
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo", messages=[system_message, user_message]
+                )
+                classification = response.choices[0].message.content.strip().lower()
+                # Check if GPT-3.5-turbo responded with 'Yes'
+                return classification.lower().startswith("yes")
+            except Exception as e:
+                print(f"Guardrail check failed: {e}")
+                # If there's an error, you might decide to fail open (allow) or fail closed (block).
+                # Here we default to fail open, but you can change as needed.
+                return True
+
         # Function to update model titles and responses
         def update_model_titles_and_responses(
-            repo_info, user_input, models_state, conversation_state
+            repo_url, user_input, models_state, conversation_state
         ):
+            # Guardrail check first
+            if not guardrail_check_se_relevance(user_input):
+                # Return updates to show the guardrail message,
+                # hide everything else or revert to original state
+                return (
+                    # guardrail_message
+                    gr.update(
+                        value="### Oops! Try asking something about software engineering. Thanks!",
+                        visible=True,
+                    ),
+                    # shared_input
+                    gr.update(value="", visible=True),
+                    # repo_url
+                    gr.update(value="", visible=True),
+                    # user_prompt_md
+                    gr.update(value="", visible=False),
+                    # response_a_title
+                    gr.update(value="", visible=False),
+                    # response_b_title
+                    gr.update(value="", visible=False),
+                    # response_a
+                    gr.update(value=""),
+                    # response_b
+                    gr.update(value=""),
+                    # multi_round_inputs
+                    gr.update(visible=False),
+                    # vote_panel
+                    gr.update(visible=False),
+                    # send_first
+                    gr.update(visible=True, interactive=True),
+                    # feedback
+                    gr.update(interactive=False),
+                    # models_state
+                    models_state,
+                    # conversation_state
+                    conversation_state,
+                    # timeout_popup
+                    gr.update(visible=False),
+                    # model_a_send
+                    gr.update(interactive=False),
+                    # model_b_send
+                    gr.update(interactive=False),
+                    # thanks_message
+                    gr.update(visible=False),
+                )
+            
+            repo_info = fetch_url_content(repo_url)
             # Combine repo-related information (if any) and user query into one prompt.
             combined_user_input = (
-                f"Repo-related Information: {fetch_url_content(repo_info)}\n\n{user_input}"
+                f"Repo-related Information: {repo_info}\n\n{user_input}"
                 if repo_info
                 else user_input
             )
@@ -810,6 +889,7 @@ with gr.Blocks() as app:
             fn=update_model_titles_and_responses,
             inputs=[repo_url, shared_input, models_state, conversation_state],
             outputs=[
+                guardrail_message,
                 shared_input,
                 repo_url,
                 user_prompt_md,

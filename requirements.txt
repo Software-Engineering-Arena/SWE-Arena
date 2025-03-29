@@ -6,4 +6,3 @@ openai
 PyGithub
 python-dotenv
 python-gitlab
-vertexai
