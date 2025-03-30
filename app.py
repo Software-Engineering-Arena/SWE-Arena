@@ -646,7 +646,7 @@ with gr.Blocks() as app:
 
         def guardrail_check_se_relevance(user_prompt):
             """
-            Use GPT-3.5-turbo to check if the user_prompt is SE-related.
+            Use gpt-4o-mini to check if the user_prompt is SE-related.
             Return True if it is SE-related, otherwise False.
             """
             # Example instructions for classification — adjust to your needs
@@ -663,10 +663,10 @@ with gr.Blocks() as app:
             try:
                 # Make the chat completion call
                 response = openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo", messages=[system_message, user_message]
+                    model="gpt-4o-mini", messages=[system_message, user_message]
                 )
                 classification = response.choices[0].message.content.strip().lower()
-                # Check if GPT-3.5-turbo responded with 'Yes'
+                # Check if the LLM responded with 'Yes'
                 return classification.lower().startswith("yes")
             except Exception as e:
                 print(f"Guardrail check failed: {e}")
