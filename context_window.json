@@ -19,7 +19,6 @@
     "grok-2-1212": 131072,
     "llama-3.1-8b": 128000,
     "llama-3.1-405b": 128000,
-    "llama-3.1-70b": 128000,
     "llama-3.3-70b": 128000,
     "mistral-embed": 8000,
     "mistral-large-latest": 131000,
