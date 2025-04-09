@@ -672,7 +672,7 @@ with gr.Blocks() as app:
             repo_url, user_input, models_state, conversation_state
         ):
             # Guardrail check first
-            if not guardrail_check_se_relevance(user_input):
+            if not repo_url and not guardrail_check_se_relevance(user_input):
                 # Return updates to show the guardrail message,
                 # hide everything else or revert to original state
                 return (
