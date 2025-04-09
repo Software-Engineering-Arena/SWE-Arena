@@ -1040,28 +1040,19 @@ with gr.Blocks() as app:
 
             # Adjust output count to match the interface definition
             return (
-                gr.update(
-                    value="", interactive=True, visible=True
-                ),  # Clear shared_input
-                gr.update(value="", interactive=True, visible=True),  # Clear repo_url
-                gr.update(value="", visible=False),  # Hide user_prompt_md
-                gr.update(value="", visible=False),  # Hide response_a_title
-                gr.update(value="", visible=False),  # Hide response_b_title
-                gr.update(value=""),  # Clear Model A response
-                gr.update(value=""),  # Clear Model B response
-                gr.update(visible=False),  # Hide multi-round inputs
-                gr.update(visible=False),  # Hide vote panel
-                gr.update(
-                    value="Submit", interactive=True, visible=True
-                ),  # Update send_first button
-                gr.update(
-                    value="Can't Decide", interactive=True
-                ),  # Reset feedback selection
-                get_leaderboard_data(feedback_entry),  # Updated leaderboard data
-                gr.update(visible=True),  # Show the thanks message
-                gr.update(
-                    value="", interactive=True, visible=True
-                ),  # Show the repo-related url message
+                gr.update(value="", interactive=True, visible=True),   # [0] Clear shared_input textbox
+                gr.update(value="", interactive=True, visible=True),   # [1] Clear repo_url textbox
+                gr.update(value="", visible=False),                    # [2] Hide user_prompt_md markdown component
+                gr.update(value="", visible=False),                    # [3] Hide response_a_title markdown component
+                gr.update(value="", visible=False),                    # [4] Hide response_b_title markdown component
+                gr.update(value=""),                                   # [5] Clear Model A response markdown component
+                gr.update(value=""),                                   # [6] Clear Model B response markdown component
+                gr.update(visible=False),                              # [7] Hide multi_round_inputs row
+                gr.update(visible=False),                              # [8] Hide vote_panel row
+                gr.update(value="Submit", interactive=True, visible=True),# [9] Reset send_first button
+                gr.update(value="Can't Decide", interactive=True),     # [10] Reset feedback radio selection
+                get_leaderboard_data(feedback_entry),                  # [11] Updated leaderboard data
+                gr.update(visible=True)                                # [12] Show the thanks_message markdown component
             )
 
         # Update the click event for the submit feedback button
