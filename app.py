@@ -332,18 +332,11 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
     try:
         api = HfApi()
         # List all files in the repository
-        repo_files = api.list_repo_files(repo_id=repo_name, repo_type="dataset")
-
-        # Filter files by current year and month
-        leaderboard_files = [file for file in repo_files if year_quarter in file]
-
-        if not leaderboard_files:
-            raise FileNotFoundError(
-                f"No feedback files found for {year_quarter} in {repo_name}."
-            )
-
-        # Download and aggregate data
-        for file in leaderboard_files:
+        for file in api.list_repo_files(repo_id=repo_name, repo_type="dataset"):
+            # Filter files by current year and month
+            if year_quarter not in file:
+                continue
+            # Download and aggregate data
             local_path = hf_hub_download(
                 repo_id=repo_name, filename=file, repo_type="dataset"
             )
