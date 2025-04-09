@@ -188,7 +188,7 @@ def fetch_url_content(url):
             return fetch_huggingface_content(url)
     except Exception as e:
         print(f"Error fetching URL content: {e}")
-    return ''
+    return ""
 
 
 # Truncate prompt
@@ -673,59 +673,58 @@ with gr.Blocks() as app:
         ):
             # Guardrail check first
             if not repo_url and not guardrail_check_se_relevance(user_input):
-                # Return updates to show the guardrail message,
-                # hide everything else or revert to original state
+                # Return updates to show the guardrail message and hide everything else.
                 return (
-                    # guardrail_message
+                    # [0] guardrail_message: Show guardrail message
                     gr.update(
                         value="### Oops! Try asking something about software engineering. Thanks!",
                         visible=True,
                     ),
-                    # shared_input
+                    # [1] shared_input: clear and show
                     gr.update(value="", visible=True),
-                    # repo_url
+                    # [2] repo_url: clear and show
                     gr.update(value="", visible=True),
-                    # user_prompt_md
+                    # [3] user_prompt_md: clear and hide
                     gr.update(value="", visible=False),
-                    # response_a_title
+                    # [4] response_a_title: clear and hide
                     gr.update(value="", visible=False),
-                    # response_b_title
+                    # [5] response_b_title: clear and hide
                     gr.update(value="", visible=False),
-                    # response_a
+                    # [6] response_a: clear response
                     gr.update(value=""),
-                    # response_b
+                    # [7] response_b: clear response
                     gr.update(value=""),
-                    # multi_round_inputs
+                    # [8] multi_round_inputs: hide
                     gr.update(visible=False),
-                    # vote_panel
+                    # [9] vote_panel: hide
                     gr.update(visible=False),
-                    # send_first
+                    # [10] send_first: show and enable button
                     gr.update(visible=True, interactive=True),
-                    # feedback
-                    gr.update(interactive=False),
-                    # models_state
+                    # [11] feedback: enable the selection
+                    gr.update(interactive=True),
+                    # [12] models_state: pass state as-is
                     models_state,
-                    # conversation_state
+                    # [13] conversation_state: pass state as-is
                     conversation_state,
-                    # timeout_popup
+                    # [14] timeout_popup: hide
                     gr.update(visible=False),
-                    # model_a_send
+                    # [15] model_a_send: disable
                     gr.update(interactive=False),
-                    # model_b_send
+                    # [16] model_b_send: disable
                     gr.update(interactive=False),
-                    # thanks_message
+                    # [17] thanks_message: hide
                     gr.update(visible=False),
                 )
-            
+
             repo_info = fetch_url_content(repo_url)
-            # Combine repo-related information (if any) and user query into one prompt.
+            # Combine repository info (if available) with the user query.
             combined_user_input = (
                 f"Repo-related Information: {repo_info}\n\n{user_input}"
                 if repo_info
                 else user_input
             )
 
-            # Dynamically select two random models
+            # Ensure that at least two models are available.
             if len(available_models) < 2:
                 raise ValueError(
                     "Insufficient models in context_window.json. At least two are required."
@@ -747,26 +746,44 @@ with gr.Blocks() as app:
                     combined_user_input, "Model B", models_state, conversation_state
                 )
             except TimeoutError as e:
-                # Handle the timeout by resetting components, showing a popup, and disabling inputs
+                # Handle timeout by resetting components and showing a popup.
                 return (
-                    gr.update(
-                        value="", interactive=False, visible=True
-                    ),  # Disable shared_input
-                    gr.update(
-                        value="", interactive=False, visible=True
-                    ),  # Disable repo_url
-                    gr.update(value="", visible=False),  # Hide user_prompt_md
-                    gr.update(value="", visible=False),  # Hide Model A title
-                    gr.update(value="", visible=False),  # Hide Model B title
-                    gr.update(value=""),  # Clear response from Model A
-                    gr.update(value=""),  # Clear response from Model B
-                    gr.update(visible=False),  # Hide multi-round inputs
-                    gr.update(visible=False),  # Hide vote panel
-                    gr.update(visible=True, interactive=False),  # Disable submit button
-                    gr.update(interactive=False),  # Disable feedback selection
+                    # [0] guardrail_message: hide
+                    gr.update(visible=False),
+                    # [1] shared_input: disable and clear
+                    gr.update(value="", interactive=False, visible=True),
+                    # [2] repo_url: disable and clear
+                    gr.update(value="", interactive=False, visible=True),
+                    # [3] user_prompt_md: hide
+                    gr.update(value="", visible=False),
+                    # [4] response_a_title: hide
+                    gr.update(value="", visible=False),
+                    # [5] response_b_title: hide
+                    gr.update(value="", visible=False),
+                    # [6] response_a: clear
+                    gr.update(value=""),
+                    # [7] response_b: clear
+                    gr.update(value=""),
+                    # [8] multi_round_inputs: hide
+                    gr.update(visible=False),
+                    # [9] vote_panel: hide
+                    gr.update(visible=False),
+                    # [10] send_first: disable
+                    gr.update(visible=True, interactive=False),
+                    # [11] feedback: disable
+                    gr.update(interactive=False),
+                    # [12] models_state: pass state as-is
                     models_state,
+                    # [13] conversation_state: pass state as-is
                     conversation_state,
-                    gr.update(visible=True),  # Show the timeout popup
+                    # [14] timeout_popup: show popup
+                    gr.update(visible=True),
+                    # [15] model_a_send: disable
+                    gr.update(interactive=False),
+                    # [16] model_b_send: disable
+                    gr.update(interactive=False),
+                    # [17] thanks_message: hide
+                    gr.update(visible=False),
                 )
             except Exception as e:
                 raise gr.Error(str(e))
@@ -775,28 +792,44 @@ with gr.Blocks() as app:
             model_a_send_state = toggle_submit_button("")
             model_b_send_state = toggle_submit_button("")
 
+            # Return the updates for all 18 outputs.
             return (
-                gr.update(visible=False),  # Hide shared_input
-                gr.update(visible=False),  # Hide repo_url the same way
-                gr.update(
-                    value=f"**Your Query:**\n\n{user_input}", visible=True
-                ),  # Show user_prompt_md
-                gr.update(value=f"### Model A:", visible=True),
-                gr.update(value=f"### Model B:", visible=True),
-                gr.update(value=response_a),  # Show Model A response
-                gr.update(value=response_b),  # Show Model B response
-                gr.update(visible=True),  # Show multi-round inputs
-                gr.update(visible=True),  # Show vote panel
-                gr.update(visible=False),  # Hide submit button
-                gr.update(interactive=True),  # Enable feedback selection
+                # [0] guardrail_message: hide (since no guardrail issue)
+                gr.update(visible=False),
+                # [1] shared_input: hide shared_input to prevent changes during the conversation
+                gr.update(visible=False),
+                # [2] repo_url: hide repository URL input similarly
+                gr.update(visible=False),
+                # [3] user_prompt_md: display the user's query
+                gr.update(value=f"**Your Query:**\n\n{user_input}", visible=True),
+                # [4] response_a_title: show title for Model A
+                gr.update(value="### Model A:", visible=True),
+                # [5] response_b_title: show title for Model B
+                gr.update(value="### Model B:", visible=True),
+                # [6] response_a: display Model A response
+                gr.update(value=response_a),
+                # [7] response_b: display Model B response
+                gr.update(value=response_b),
+                # [8] multi_round_inputs: show the input section for multi-round dialogues
+                gr.update(visible=True),
+                # [9] vote_panel: show vote panel
+                gr.update(visible=True),
+                # [10] send_first: hide the submit button
+                gr.update(visible=False),
+                # [11] feedback: enable the feedback selection
+                gr.update(interactive=True),
+                # [12] models_state: pass updated models_state
                 models_state,
+                # [13] conversation_state: pass updated conversation_state
                 conversation_state,
-                gr.update(visible=False),  # Hide the timeout popup if it was visible
-                model_a_send_state,  # Set model_a_send button state
-                model_b_send_state,  # Set model_b_send button state
-                gr.update(
-                    visible=False
-                ),  # thanks_message - Make sure to return it as invisible here as well
+                # [14] timeout_popup: hide any timeout popup if visible
+                gr.update(visible=False),
+                # [15] model_a_send: set state of the model A send button
+                model_a_send_state,
+                # [16] model_b_send: set state of the model B send button
+                model_b_send_state,
+                # [17] thanks_message: hide the thank-you message
+                gr.update(visible=False),
             )
 
         # Feedback panel, initially hidden
@@ -824,11 +857,6 @@ with gr.Blocks() as app:
             try:
                 # Use Hugging Face OAuth to initiate login
                 HfApi()
-
-                # Wait for user authentication and get the token
-                print(
-                    "Redirected to Hugging Face for authentication. Please complete the login."
-                )
                 token = HfFolder.get_token()
                 if not token:
                     raise Exception("Authentication token not found.")
