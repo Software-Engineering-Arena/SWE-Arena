@@ -16,10 +16,15 @@
     "gemini-2.0-flash-lite-preview": 1048576,
     "gemini-2.0-pro-exp": 2097152,
     "gemma-3-27b-it": 128000,
-    "grok-2-1212": 131072,
+    "grok-3-fast-beta": 1000000,
+    "grok-3-beta": 1000000,
+    "grok-3-mini-fast-beta": 1000000,
+    "grok-3-mini-beta": 1000000,
     "llama-3.1-8b": 128000,
     "llama-3.1-405b": 128000,
     "llama-3.3-70b": 128000,
+    "llama4-scout-instruct-basic": 10000000,
+    "llama4-maverick-instruct-basic": 10000000,
     "mistral-large-latest": 131000,
     "mistral-small-latest": 32000,
     "o1": 128000,
@@ -28,6 +33,5 @@
     "Qwen2.5-32B-Instruct": 131072,
     "Qwen2.5-72B-Instruct": 131072,
     "Qwen2.5-72B-Instruct-128k": 131072,
-    "Qwen2.5-Coder-32B-Instruct": 131072,
-    "yi-large": 32000
+    "Qwen2.5-Coder-32B-Instruct": 131072
 }

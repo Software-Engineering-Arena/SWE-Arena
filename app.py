@@ -510,7 +510,7 @@ with gr.Blocks() as app:
             # ⚔️ Software Engineering (SE) Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
 
             ## 📜How It Works
-            - **Blind Comparison**: Submit a SE-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models, including OpenAI-o3, Grok-2, Gemini-2.0, Claude-3.7, Deepseek-r1, Mistral-large, Llama-3.3, Qwen-2.5, and others.
+            - **Blind Comparison**: Submit a SE-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.
             - **Interactive Voting**: Engage in multi-turn dialogues with both chatbots and compare their responses. You can continue the conversation until you confidently choose the better model.
             - **Fair Play Rules**: Votes are counted only if chatbot identities remain anonymous. Revealing a chatbot's identity disqualifies the session.
 
