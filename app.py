@@ -38,10 +38,6 @@ with open("context_window.json", "r") as file:
 
 # Get list of available models
 available_models = list(context_window.keys())
-if len(available_models) < 2:
-    raise ValueError(
-        "Insufficient models in context_window.json. At least two are required."
-    )
 
 # Initialize global variables
 models_state = {}
@@ -724,12 +720,8 @@ with gr.Blocks() as app:
                 else user_input
             )
 
-            # Ensure that at least two models are available.
-            if len(available_models) < 2:
-                raise ValueError(
-                    "Insufficient models in context_window.json. At least two are required."
-                )
-            selected_models = random.sample(available_models, 2)
+            # Randomly select two models for the comparison
+            selected_models = [random.choice(available_models) for _ in range(2)]
             models = {"Model A": selected_models[0], "Model B": selected_models[1]}
 
             # Update the states
