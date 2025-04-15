@@ -405,7 +405,7 @@ def get_leaderboard_data(feedback_entry=None):
     )
     
     # Calculate consistency score as a pandas Series aligned with other metrics
-    is_result = pd.Series(0.0, index=elo_result.scores.index)  # Initialize with zeros using same index
+    is_result = pd.Series("N/A", index=elo_result.scores.index)  # Initialize with zeros using same index
 
     # Loop through models and update values
     for model in is_result.index:
@@ -420,14 +420,14 @@ def get_leaderboard_data(feedback_entry=None):
             # Count non-draw outcomes (wins or losses)
             draws = self_matches[self_matches["winner"] == evalica.Winner.Draw].shape[0]
             # Store as percentage directly
-            is_result[model] = draws / totals
+            is_result[model] = round(draws / totals * 100, 2)
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
         {
             "Model": elo_result.scores.index,
             "Elo Score": elo_result.scores.values,
-            "Consistency Score": is_result.values * 100,
+            "Consistency Score": is_result.values,
             "Average Win Rate": avr_result.scores.values * 100,
             "Bradley-Terry Coefficient": bt_result.scores.values,
             "Eigenvector Centrality Value": eigen_result.scores.values,
@@ -440,7 +440,6 @@ def get_leaderboard_data(feedback_entry=None):
     leaderboard_data = leaderboard_data.round(
         {
             "Elo Score": 2,
-            "Consistency Score": 2,
             "Average Win Rate": 2,
             "Bradley-Terry Coefficient": 2,
             "Eigenvector Centrality Value": 2,
