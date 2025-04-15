@@ -366,6 +366,7 @@ def get_leaderboard_data(feedback_entry=None):
                 "Rank",
                 "Model",
                 "Elo Score",
+                "Instability Score",
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
@@ -402,12 +403,31 @@ def get_leaderboard_data(feedback_entry=None):
     pagerank_result = evalica.pagerank(
         feedback_df["left"], feedback_df["right"], feedback_df["winner"]
     )
+    
+    # Calculate instability score as a pandas Series aligned with other metrics
+    is_result = pd.Series(0.0, index=elo_result.scores.index)  # Initialize with zeros using same index
+
+    # Loop through models and update values
+    for model in is_result.index:
+        # Filter self-matches for this model
+        self_matches = feedback_df[
+            (feedback_df["left"] == model) & 
+            (feedback_df["right"] == model)
+        ]
+        total = len(self_matches)
+        
+        if total:
+            # Count non-draw outcomes (wins or losses)
+            non_draws = self_matches[self_matches["winner"] != evalica.Winner.Draw].shape[0]
+            # Store as percentage directly
+            is_result[model] = non_draws / total
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
         {
             "Model": elo_result.scores.index,
             "Elo Score": elo_result.scores.values,
+            "Instability Score": is_result.values * 100,
             "Average Win Rate": avr_result.scores.values * 100,
             "Bradley-Terry Coefficient": bt_result.scores.values,
             "Eigenvector Centrality Value": eigen_result.scores.values,
@@ -420,6 +440,7 @@ def get_leaderboard_data(feedback_entry=None):
     leaderboard_data = leaderboard_data.round(
         {
             "Elo Score": 2,
+            "Instability Score": 2,
             "Average Win Rate": 2,
             "Bradley-Terry Coefficient": 2,
             "Eigenvector Centrality Value": 2,
@@ -471,11 +492,12 @@ with gr.Blocks() as app:
                 "Rank",
                 "Model",
                 "Elo Score",
-                "Average Win Rate",
+                "Instability Score",
             ],
             search_columns=["Model"],
             filter_columns=[
                 "Elo Score",
+                "Instability Score",
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
