@@ -509,14 +509,11 @@ with gr.Blocks() as app:
             """
             Made with ❤️ for SE Arena. If this work is useful to you, please consider citing:
             ```
-            @misc{zhao2025searenabenchmarkingsoftware,
-            title={SE Arena: Benchmarking Software Engineering Chatbots with Iterative Interactions}, 
-            author={Zhimin Zhao},
-            year={2025},
-            eprint={2502.01860},
-            archivePrefix={arXiv},
-            primaryClass={cs.SE},
-            url={https://arxiv.org/abs/2502.01860}}
+            @inproceedings{zhao2025se,
+            title={SE Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering},
+            author={Zhao, Zhimin},
+            booktitle={ACM international conference on AI Foundation Models and Software Engineering},
+            year={2025}}
             ```
             """
         )
