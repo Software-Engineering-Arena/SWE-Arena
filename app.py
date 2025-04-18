@@ -403,19 +403,20 @@ def get_leaderboard_data(feedback_entry=None):
     pagerank_result = evalica.pagerank(
         feedback_df["left"], feedback_df["right"], feedback_df["winner"]
     )
-    
+
     # Calculate consistency score as a pandas Series aligned with other metrics
-    is_result = pd.Series("N/A", index=elo_result.scores.index)  # Initialize with zeros using same index
+    is_result = pd.Series(
+        "N/A", index=elo_result.scores.index
+    )  # Initialize with zeros using same index
 
     # Loop through models and update values
     for model in is_result.index:
         # Filter self-matches for this model
         self_matches = feedback_df[
-            (feedback_df["left"] == model) & 
-            (feedback_df["right"] == model)
+            (feedback_df["left"] == model) & (feedback_df["right"] == model)
         ]
         totals = len(self_matches)
-        
+
         if totals:
             # Count non-draw outcomes (wins or losses)
             draws = self_matches[self_matches["winner"] == evalica.Winner.Draw].shape[0]
@@ -681,23 +682,36 @@ with gr.Blocks() as app:
                 # Here we default to fail open, but you can change as needed.
                 return True
 
+        def disable_first_submit_ui():
+            """First function to immediately disable UI elements"""
+            return (
+                # [0] guardrail_message: hide
+                gr.update(visible=False),
+                # [1] shared_input: disable but keep visible
+                gr.update(interactive=False),
+                # [2] repo_url: disable but keep visible
+                gr.update(interactive=False),
+                # [3] send_first: disable and show loading state
+                gr.update(interactive=False, value="Processing..."),
+            )
+
         # Function to update model titles and responses
         def update_model_titles_and_responses(
             repo_url, user_input, models_state, conversation_state
         ):
             # Guardrail check first
             if not repo_url and not guardrail_check_se_relevance(user_input):
-                # Return updates to show the guardrail message and hide everything else.
+                # Return updates to show the guardrail message and re-enable UI
                 return (
                     # [0] guardrail_message: Show guardrail message
                     gr.update(
                         value="### Oops! Try asking something about software engineering. Thanks!",
                         visible=True,
                     ),
-                    # [1] shared_input: clear and show
-                    gr.update(value="", visible=True),
-                    # [2] repo_url: clear and show
-                    gr.update(value="", visible=True),
+                    # [1] shared_input: clear and re-enable
+                    gr.update(value="", interactive=True, visible=True),
+                    # [2] repo_url: clear and re-enable
+                    gr.update(value="", interactive=True, visible=True),
                     # [3] user_prompt_md: clear and hide
                     gr.update(value="", visible=False),
                     # [4] response_a_title: clear and hide
@@ -712,8 +726,8 @@ with gr.Blocks() as app:
                     gr.update(visible=False),
                     # [9] vote_panel: hide
                     gr.update(visible=False),
-                    # [10] send_first: show and enable button
-                    gr.update(visible=True, interactive=True),
+                    # [10] send_first: re-enable button with original text
+                    gr.update(visible=True, interactive=True, value="Submit"),
                     # [11] feedback: enable the selection
                     gr.update(interactive=True),
                     # [12] models_state: pass state as-is
@@ -760,10 +774,10 @@ with gr.Blocks() as app:
                 return (
                     # [0] guardrail_message: hide
                     gr.update(visible=False),
-                    # [1] shared_input: disable and clear
-                    gr.update(value="", interactive=False, visible=True),
-                    # [2] repo_url: disable and clear
-                    gr.update(value="", interactive=False, visible=True),
+                    # [1] shared_input: re-enable and clear
+                    gr.update(value="", interactive=True, visible=True),
+                    # [2] repo_url: re-enable and clear
+                    gr.update(value="", interactive=True, visible=True),
                     # [3] user_prompt_md: hide
                     gr.update(value="", visible=False),
                     # [4] response_a_title: hide
@@ -778,8 +792,8 @@ with gr.Blocks() as app:
                     gr.update(visible=False),
                     # [9] vote_panel: hide
                     gr.update(visible=False),
-                    # [10] send_first: disable
-                    gr.update(visible=True, interactive=False),
+                    # [10] send_first: re-enable with original text
+                    gr.update(visible=True, interactive=True, value="Submit"),
                     # [11] feedback: disable
                     gr.update(interactive=False),
                     # [12] models_state: pass state as-is
@@ -806,10 +820,10 @@ with gr.Blocks() as app:
             return (
                 # [0] guardrail_message: hide (since no guardrail issue)
                 gr.update(visible=False),
-                # [1] shared_input: hide shared_input to prevent changes during the conversation
-                gr.update(visible=False),
-                # [2] repo_url: hide repository URL input similarly
-                gr.update(visible=False),
+                # [1] shared_input: re-enable but hide
+                gr.update(interactive=True, visible=False),
+                # [2] repo_url: re-enable but hide
+                gr.update(interactive=True, visible=False),
                 # [3] user_prompt_md: display the user's query
                 gr.update(value=f"**Your Query:**\n\n{user_input}", visible=True),
                 # [4] response_a_title: show title for Model A
@@ -824,8 +838,8 @@ with gr.Blocks() as app:
                 gr.update(visible=True),
                 # [9] vote_panel: show vote panel
                 gr.update(visible=True),
-                # [10] send_first: hide the submit button
-                gr.update(visible=False),
+                # [10] send_first: hide the submit button but restore label
+                gr.update(visible=False, value="Submit"),
                 # [11] feedback: enable the feedback selection
                 gr.update(interactive=True),
                 # [12] models_state: pass updated models_state
@@ -915,9 +929,20 @@ with gr.Blocks() as app:
 
         # First round handling
         send_first.click(
-            fn=hide_thanks_message, inputs=[], outputs=[thanks_message]
+            fn=hide_thanks_message, 
+            inputs=[], 
+            outputs=[thanks_message]
         ).then(
-            fn=update_model_titles_and_responses,
+            fn=disable_first_submit_ui,  # First disable UI
+            inputs=[],
+            outputs=[
+                guardrail_message,
+                shared_input,
+                repo_url,
+                send_first  # Just the essential UI elements to update immediately
+            ]
+        ).then(
+            fn=update_model_titles_and_responses,  # Then do the actual processing
             inputs=[repo_url, shared_input, models_state, conversation_state],
             outputs=[
                 guardrail_message,
@@ -941,6 +966,15 @@ with gr.Blocks() as app:
             ],
         )
 
+        def disable_model_a_ui():
+            """First function to immediately disable model A UI elements"""
+            return (
+                # [0] model_a_input: disable
+                gr.update(interactive=False),
+                # [1] model_a_send: disable and show loading state
+                gr.update(interactive=False, value="Processing...")
+            )
+
         # Handle subsequent rounds
         def handle_model_a_send(user_input, models_state, conversation_state):
             try:
@@ -952,10 +986,8 @@ with gr.Blocks() as app:
                     response,
                     conversation_state,
                     gr.update(visible=False),
-                    gr.update(
-                        value="", interactive=True
-                    ),  # Clear and enable model_a_input
-                    gr.update(interactive=False),  # Disable model_a_send button
+                    gr.update(value="", interactive=True),  # Clear and enable model_a_input
+                    gr.update(interactive=False, value="Send to Model A"),  # Reset button text
                 )
             except TimeoutError as e:
                 # Disable inputs when timeout occurs
@@ -963,12 +995,19 @@ with gr.Blocks() as app:
                     gr.update(value=""),  # Clear response
                     conversation_state,
                     gr.update(visible=True),  # Show the timeout popup
-                    gr.update(interactive=False),  # Disable model_a_input
-                    gr.update(interactive=False),  # Disable model_a_send
+                    gr.update(interactive=True),  # Re-enable model_a_input
+                    gr.update(interactive=True, value="Send to Model A"),  # Re-enable model_a_send button
                 )
             except Exception as e:
                 raise gr.Error(str(e))
-
+        def disable_model_b_ui():
+            """First function to immediately disable model B UI elements"""
+            return (
+                # [0] model_b_input: disable
+                gr.update(interactive=False),
+                # [1] model_b_send: disable and show loading state
+                gr.update(interactive=False, value="Processing...")
+            )
         def handle_model_b_send(user_input, models_state, conversation_state):
             try:
                 response = chat_with_models(
@@ -979,10 +1018,8 @@ with gr.Blocks() as app:
                     response,
                     conversation_state,
                     gr.update(visible=False),
-                    gr.update(
-                        value="", interactive=True
-                    ),  # Clear and enable model_b_input
-                    gr.update(interactive=False),  # Disable model_b_send button
+                    gr.update(value="", interactive=True),  # Clear and enable model_b_input
+                    gr.update(interactive=False, value="Send to Model B"),  # Reset button text
                 )
             except TimeoutError as e:
                 # Disable inputs when timeout occurs
@@ -990,14 +1027,21 @@ with gr.Blocks() as app:
                     gr.update(value=""),  # Clear response
                     conversation_state,
                     gr.update(visible=True),  # Show the timeout popup
-                    gr.update(interactive=False),  # Disable model_b_input
-                    gr.update(interactive=False),  # Disable model_b_send
+                    gr.update(interactive=True),  # Re-enable model_b_input
+                    gr.update(interactive=True, value="Send to Model B"),  # Re-enable model_b_send button
                 )
             except Exception as e:
                 raise gr.Error(str(e))
 
         model_a_send.click(
-            handle_model_a_send,
+            fn=disable_model_a_ui,  # First disable UI
+            inputs=[],
+            outputs=[
+                model_a_input, 
+                model_a_send
+            ]
+        ).then(
+            fn=handle_model_a_send,  # Then do the actual processing
             inputs=[model_a_input, models_state, conversation_state],
             outputs=[
                 response_a,
@@ -1008,7 +1052,14 @@ with gr.Blocks() as app:
             ],
         )
         model_b_send.click(
-            handle_model_b_send,
+            fn=disable_model_b_ui,  # First disable UI
+            inputs=[],
+            outputs=[
+                model_b_input,
+                model_b_send
+            ]
+        ).then(
+            fn=handle_model_b_send,  # Then do the actual processing
             inputs=[model_b_input, models_state, conversation_state],
             outputs=[
                 response_b,
@@ -1050,19 +1101,35 @@ with gr.Blocks() as app:
 
             # Adjust output count to match the interface definition
             return (
-                gr.update(value="", interactive=True, visible=True),   # [0] Clear shared_input textbox
-                gr.update(value="", interactive=True, visible=True),   # [1] Clear repo_url textbox
-                gr.update(value="", visible=False),                    # [2] Hide user_prompt_md markdown component
-                gr.update(value="", visible=False),                    # [3] Hide response_a_title markdown component
-                gr.update(value="", visible=False),                    # [4] Hide response_b_title markdown component
-                gr.update(value=""),                                   # [5] Clear Model A response markdown component
-                gr.update(value=""),                                   # [6] Clear Model B response markdown component
-                gr.update(visible=False),                              # [7] Hide multi_round_inputs row
-                gr.update(visible=False),                              # [8] Hide vote_panel row
-                gr.update(value="Submit", interactive=True, visible=True),# [9] Reset send_first button
-                gr.update(value="Can't Decide", interactive=True),     # [10] Reset feedback radio selection
-                get_leaderboard_data(feedback_entry),                  # [11] Updated leaderboard data
-                gr.update(visible=True)                                # [12] Show the thanks_message markdown component
+                gr.update(
+                    value="", interactive=True, visible=True
+                ),  # [0] Clear shared_input textbox
+                gr.update(
+                    value="", interactive=True, visible=True
+                ),  # [1] Clear repo_url textbox
+                gr.update(
+                    value="", visible=False
+                ),  # [2] Hide user_prompt_md markdown component
+                gr.update(
+                    value="", visible=False
+                ),  # [3] Hide response_a_title markdown component
+                gr.update(
+                    value="", visible=False
+                ),  # [4] Hide response_b_title markdown component
+                gr.update(value=""),  # [5] Clear Model A response markdown component
+                gr.update(value=""),  # [6] Clear Model B response markdown component
+                gr.update(visible=False),  # [7] Hide multi_round_inputs row
+                gr.update(visible=False),  # [8] Hide vote_panel row
+                gr.update(
+                    value="Submit", interactive=True, visible=True
+                ),  # [9] Reset send_first button
+                gr.update(
+                    value="Can't Decide", interactive=True
+                ),  # [10] Reset feedback radio selection
+                get_leaderboard_data(feedback_entry),  # [11] Updated leaderboard data
+                gr.update(
+                    visible=True
+                ),  # [12] Show the thanks_message markdown component
             )
 
         # Update the click event for the submit feedback button

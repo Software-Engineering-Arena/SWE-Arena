@@ -22,7 +22,6 @@
     "grok-3-beta": 1000000,
     "grok-3-mini-fast-beta": 1000000,
     "grok-3-mini-beta": 1000000,
-    "llama-3.1-8b": 128000,
     "llama-3.1-405b": 128000,
     "llama-3.3-70b": 128000,
     "llama4-scout-instruct-basic": 10000000,
