@@ -1077,7 +1077,6 @@ with gr.Blocks() as app:
         )
 
         def submit_feedback(vote, models_state, conversation_state):
-            global leaderboard_data
             # Map vote to actual model names
             match vote:
                 case "Model A":
