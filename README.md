@@ -11,64 +11,71 @@ pinned: false
 short_description: The chatbot arena for software engineering
 ---
 
-# SE Arena: Evaluate Best SE Chatbots with Long-Context Interactions
+# SE Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering
 
-Welcome to **SE Arena**, an open-source platform designed for evaluating software engineering-focused chatbots. SE Arena benchmarks foundation models (FMs), such as large language models (LLMs), in iterative, context-rich workflows that are characteristic of software engineering (SE) tasks.
+Welcome to **SE Arena**, an open-source platform designed for evaluating software engineering-focused foundation models (FMs), particularly large language models (LLMs). SE Arena benchmarks models in iterative, context-rich workflows that are characteristic of software engineering (SE) tasks.
 
 ## Key Features
 
-- **Advanced Pairwise Comparisons**: Assess chatbots using Elo score, PageRank, and Newman modularity to understand both global performance and task-specific strengths.
-- **Interactive Evaluation**: Test chatbots in multi-round conversations tailored for SE tasks like debugging, code generation, and requirement refinement.
-- **Transparent Leaderboard**: View real-time model rankings across diverse SE workflows, updated using advanced evaluation metrics.
+- **Multi-Round Conversational Workflows**: Evaluate models through extended, context-dependent interactions that mirror real-world SE processes.
+- **RepoChat Integration**: Automatically inject repository context (issues, commits, PRs) into conversations for more realistic evaluations.
+- **Advanced Evaluation Metrics**: Assess models using a comprehensive suite of metrics including:
+  - Traditional metrics: Elo score and average win rate
+  - Network-based metrics: Eigenvector centrality, PageRank score
+  - Community detection: Newman modularity score
+  - **Consistency score**: Quantify model determinism and reliability through self-play matches
+- **Transparent, Open-Source Leaderboard**: View real-time model rankings across diverse SE workflows with full transparency.
 
 ## Why SE Arena?
 
-Existing evaluation frameworks often do not address the complex, iterative nature of SE tasks. SE Arena fills this gap by:
+Existing evaluation frameworks (like Chatbot Arena, WebDev Arena, and Copilot Arena) often don't address the complex, iterative nature of SE tasks. SE Arena fills critical gaps by:
 
-- Supporting long-context, multi-turn evaluations to capture iterative workflows.
-- Allowing anonymous model comparisons to prevent bias.
-- Providing rich, multidimensional metrics for more nuanced model evaluations.
+- Supporting context-rich, multi-turn evaluations to capture iterative workflows
+- Integrating repository-level context through RepoChat to simulate real-world development scenarios
+- Providing multidimensional metrics for nuanced model comparisons
+- Focusing on the full breadth of SE tasks beyond just code generation
 
 ## How It Works
 
-1. **Submit a Prompt**: Sign in and input your SE-related task (e.g., debugging, code reviews).
-2. **Compare Responses**: Two anonymous chatbots provide responses to your query.
-3. **Vote**: Choose the better response, mark as tied, or select "Can't Decide."
-4. **Iterative Testing**: Continue the conversation with follow-up prompts to test contextual understanding over multiple rounds.
+1. **Submit a Prompt**: Sign in and input your SE-related task (optional: include a repository URL for RepoChat context)
+2. **Compare Responses**: Two anonymous models provide responses to your query
+3. **Continue the Conversation**: Test contextual understanding over multiple rounds
+4. **Vote**: Choose the better model at any point, with ability to re-assess after multiple turns
 
 ## Getting Started
 
 ### Prerequisites
 
-- A [Hugging Face](https://huggingface.co) account.
-- Basic understanding of software engineering workflows.
+- A [Hugging Face](https://huggingface.co) account
+- Basic understanding of software engineering workflows
 
 ### Usage
 
-1. Navigate to the [SE Arena platform](https://huggingface.co/spaces/SE-Arena/Software-Engineering-Arena).
-2. Sign in with your Hugging Face account.
-3. Enter your SE task prompt and start evaluating model responses.
-4. Vote on the better response or continue multi-round interactions to test contextual understanding.
+1. Navigate to the [SE Arena platform](https://huggingface.co/spaces/SE-Arena/Software-Engineering-Arena)
+2. Sign in with your Hugging Face account
+3. Enter your SE task prompt (optionally include a repository URL for RepoChat)
+4. Engage in multi-round interactions and vote on model performance
 
 ## Contributing
 
 We welcome contributions from the community! Here's how you can help:
 
-1. **Submit Prompts**: Share your SE-related tasks to enrich our evaluation dataset.
-2. **Report Issues**: Found a bug or have a feature request? Open an issue in this repository.
-3. **Enhance the Codebase**: Fork the repository, make your changes, and submit a pull request.
+1. **Submit SE Tasks**: Share your real-world SE problems to enrich our evaluation dataset
+2. **Report Issues**: Found a bug or have a feature request? Open an issue in this repository
+3. **Enhance the Codebase**: Fork the repository, make your changes, and submit a pull request
 
 ## Privacy Policy
 
-Your interactions are anonymized and used solely for improving SE Arena and FM benchmarking. By using SE Arena, you agree to our [Terms of Service](#).
+Your interactions are anonymized and used solely for improving SE Arena and FM benchmarking. By using SE Arena, you agree to our Terms of Service.
 
 ## Future Plans
 
-- **Enhanced Metrics**: Add round-wise analysis and context-aware evaluation metrics.
-- **Domain-Specific Sub-Leaderboards**: Rankings focused on tasks like debugging, requirement refinement, etc.
-- **Advanced Context Compression**: Techniques like LongRope and SelfExtend to manage long-term memory.
-- **Support for Multimodal Models**: Evaluate models that integrate text, code, and other modalities.
+- **Analysis of Real-World SE Workloads**: Identify common patterns and challenges in user-submitted tasks
+- **Multi-Round Evaluation Metrics**: Develop specialized metrics for assessing model adaptation over successive turns
+- **Enhanced Community Engagement**: Enable broader participation through voting and contributions
+- **Expanded FM Coverage**: Include domain-specific and multimodal foundation models
+- **Advanced Context Compression**: Integrate techniques like LongRope and SelfExtend to manage long-term memory
 
 ## Contact
 
-For inquiries or feedback, please [open an issue](https://github.com/SE-Arena/Software-Engineer-Arena/issues/new) in this repository. We welcome your contributions and suggestions!
+For inquiries or feedback, please [open an issue](https://github.com/SE-Arena/Software-Engineering-Arena/issues/new) in this repository. We welcome your contributions and suggestions!
