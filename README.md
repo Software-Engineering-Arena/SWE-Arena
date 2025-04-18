@@ -4,7 +4,7 @@ emoji: 🛠️
 colorFrom: blue
 colorTo: purple
 sdk: gradio
-sdk_version: 5.8.0
+sdk_version: 5.25.2
 app_file: app.py
 hf_oauth: true
 pinned: false
