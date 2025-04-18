@@ -929,9 +929,7 @@ with gr.Blocks() as app:
 
         # First round handling
         send_first.click(
-            fn=hide_thanks_message, 
-            inputs=[], 
-            outputs=[thanks_message]
+            fn=hide_thanks_message, inputs=[], outputs=[thanks_message]
         ).then(
             fn=disable_first_submit_ui,  # First disable UI
             inputs=[],
@@ -939,8 +937,8 @@ with gr.Blocks() as app:
                 guardrail_message,
                 shared_input,
                 repo_url,
-                send_first  # Just the essential UI elements to update immediately
-            ]
+                send_first,  # Just the essential UI elements to update immediately
+            ],
         ).then(
             fn=update_model_titles_and_responses,  # Then do the actual processing
             inputs=[repo_url, shared_input, models_state, conversation_state],
@@ -972,7 +970,7 @@ with gr.Blocks() as app:
                 # [0] model_a_input: disable
                 gr.update(interactive=False),
                 # [1] model_a_send: disable and show loading state
-                gr.update(interactive=False, value="Processing...")
+                gr.update(interactive=False, value="Processing..."),
             )
 
         # Handle subsequent rounds
@@ -986,8 +984,12 @@ with gr.Blocks() as app:
                     response,
                     conversation_state,
                     gr.update(visible=False),
-                    gr.update(value="", interactive=True),  # Clear and enable model_a_input
-                    gr.update(interactive=False, value="Send to Model A"),  # Reset button text
+                    gr.update(
+                        value="", interactive=True
+                    ),  # Clear and enable model_a_input
+                    gr.update(
+                        interactive=False, value="Send to Model A"
+                    ),  # Reset button text
                 )
             except TimeoutError as e:
                 # Disable inputs when timeout occurs
@@ -996,18 +998,22 @@ with gr.Blocks() as app:
                     conversation_state,
                     gr.update(visible=True),  # Show the timeout popup
                     gr.update(interactive=True),  # Re-enable model_a_input
-                    gr.update(interactive=True, value="Send to Model A"),  # Re-enable model_a_send button
+                    gr.update(
+                        interactive=True, value="Send to Model A"
+                    ),  # Re-enable model_a_send button
                 )
             except Exception as e:
                 raise gr.Error(str(e))
+
         def disable_model_b_ui():
             """First function to immediately disable model B UI elements"""
             return (
                 # [0] model_b_input: disable
                 gr.update(interactive=False),
                 # [1] model_b_send: disable and show loading state
-                gr.update(interactive=False, value="Processing...")
+                gr.update(interactive=False, value="Processing..."),
             )
+
         def handle_model_b_send(user_input, models_state, conversation_state):
             try:
                 response = chat_with_models(
@@ -1018,8 +1024,12 @@ with gr.Blocks() as app:
                     response,
                     conversation_state,
                     gr.update(visible=False),
-                    gr.update(value="", interactive=True),  # Clear and enable model_b_input
-                    gr.update(interactive=False, value="Send to Model B"),  # Reset button text
+                    gr.update(
+                        value="", interactive=True
+                    ),  # Clear and enable model_b_input
+                    gr.update(
+                        interactive=False, value="Send to Model B"
+                    ),  # Reset button text
                 )
             except TimeoutError as e:
                 # Disable inputs when timeout occurs
@@ -1028,7 +1038,9 @@ with gr.Blocks() as app:
                     conversation_state,
                     gr.update(visible=True),  # Show the timeout popup
                     gr.update(interactive=True),  # Re-enable model_b_input
-                    gr.update(interactive=True, value="Send to Model B"),  # Re-enable model_b_send button
+                    gr.update(
+                        interactive=True, value="Send to Model B"
+                    ),  # Re-enable model_b_send button
                 )
             except Exception as e:
                 raise gr.Error(str(e))
@@ -1036,10 +1048,7 @@ with gr.Blocks() as app:
         model_a_send.click(
             fn=disable_model_a_ui,  # First disable UI
             inputs=[],
-            outputs=[
-                model_a_input, 
-                model_a_send
-            ]
+            outputs=[model_a_input, model_a_send],
         ).then(
             fn=handle_model_a_send,  # Then do the actual processing
             inputs=[model_a_input, models_state, conversation_state],
@@ -1054,10 +1063,7 @@ with gr.Blocks() as app:
         model_b_send.click(
             fn=disable_model_b_ui,  # First disable UI
             inputs=[],
-            outputs=[
-                model_b_input,
-                model_b_send
-            ]
+            outputs=[model_b_input, model_b_send],
         ).then(
             fn=handle_model_b_send,  # Then do the actual processing
             inputs=[model_b_input, models_state, conversation_state],
