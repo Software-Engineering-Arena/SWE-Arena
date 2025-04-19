@@ -521,7 +521,7 @@ with gr.Blocks() as app:
         # Add title and description as a Markdown component
         arena_intro = gr.Markdown(
             f"""
-            # ⚔️ SE Arena: Explore and Test Top FMs with SE Tasks
+            # ⚔️ SE Arena: Explore and Test Top FMs with SE Tasks by Community Voting
 
             ## 📜How It Works
             - **Blind Comparison**: Submit a SE-related query to two anonymous FMs randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.
