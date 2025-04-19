@@ -479,9 +479,8 @@ with gr.Blocks() as app:
         # Add title and description as a Markdown component
         leaderboard_intro = gr.Markdown(
             """
-            # 🏆 Software Engineering (SE) Chatbot Leaderboard: Community-Driven Evaluation of Top SE Chatbots
-
-            The SE Arena is an open-source platform designed to evaluate language models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading foundation models in SE tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
+            # 🏆 FM4SE Leaderboard: Community-Driven Evaluation of Top Foundation Models (FMs) in Software Engineering (SE) Tasks
+            The SE Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading FMs in SE tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
             """,
             elem_classes="leaderboard-intro",
         )
@@ -522,12 +521,12 @@ with gr.Blocks() as app:
         # Add title and description as a Markdown component
         arena_intro = gr.Markdown(
             f"""
-            # ⚔️ Software Engineering (SE) Arena: Explore and Test the Best SE Chatbots with Long-Context Interactions
+            # ⚔️ SE Arena: Explore and Test Top FMs with SE Tasks
 
             ## 📜How It Works
-            - **Blind Comparison**: Submit a SE-related query to two anonymous chatbots randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.
-            - **Interactive Voting**: Engage in multi-turn dialogues with both chatbots and compare their responses. You can continue the conversation until you confidently choose the better model.
-            - **Fair Play Rules**: Votes are counted only if chatbot identities remain anonymous. Revealing a chatbot's identity disqualifies the session.
+            - **Blind Comparison**: Submit a SE-related query to two anonymous FMs randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.
+            - **Interactive Voting**: Engage in multi-turn dialogues with both FMs and compare their responses. You can continue the conversation until you confidently choose the better model.
+            - **Fair Play Rules**: Votes are counted only if FM identities remain anonymous. Revealing a FM's identity disqualifies the session.
 
             **Note:** Due to budget constraints, responses that take longer than {TIMEOUT} seconds to generate will be discarded.
             """,
