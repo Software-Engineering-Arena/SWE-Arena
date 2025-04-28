@@ -267,11 +267,38 @@ def chat_with_models(
     elif model_response["error"]:
         raise Exception(model_response["error"])
     else:
-        formatted_response = f"```\n{model_response['content']}\n```"
+        # Add the model's response to the conversation state
         conversation_state[model_name].append(
             {"role": "assistant", "content": model_response["content"]}
         )
-        return formatted_response
+        
+        # Format the complete conversation history with different colors
+        formatted_history = format_conversation_history(conversation_state[model_name])
+        
+        return formatted_history
+
+
+def format_conversation_history(conversation_history):
+    """
+    Format the conversation history with different colors for user and model messages.
+    
+    Args:
+        conversation_history (list): List of conversation messages with role and content.
+        
+    Returns:
+        str: Markdown formatted conversation history.
+    """
+    formatted_text = ""
+    
+    for message in conversation_history:
+        if message["role"] == "user":
+            # Format user messages with blue text
+            formatted_text += f"<div style='color: #0066cc; background-color: #f0f7ff; padding: 10px; border-radius: 5px; margin-bottom: 10px;'><strong>User:</strong> {message['content']}</div>\n\n"
+        else:  # assistant/model messages
+            # Format model messages with dark green text
+            formatted_text += f"<div style='color: #006633; background-color: #f0fff0; padding: 10px; border-radius: 5px; margin-bottom: 10px;'><strong>Model:</strong> {message['content']}</div>\n\n"
+    
+    return formatted_text
 
 
 def save_content_to_hf(feedback_data, repo_name):
