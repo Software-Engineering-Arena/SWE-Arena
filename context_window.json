@@ -33,8 +33,7 @@
     "o3": 200000,
     "o3-mini": 200000,
     "o4-mini": 200000,
-    "Qwen2.5-32B-Instruct": 131072,
-    "Qwen2.5-72B-Instruct": 131072,
-    "Qwen2.5-72B-Instruct-128k": 131072,
-    "Qwen2.5-Coder-32B-Instruct": 131072
+    "qwen3-30b-a3b": 32768,
+    "qwen3-32b": 32768,
+    "qwen3-235b-a22b": 32768
 }
