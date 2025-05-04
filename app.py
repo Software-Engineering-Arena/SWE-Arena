@@ -419,63 +419,71 @@ def get_leaderboard_data(vote_entry=None):
         vote_df, conversation_df, on=["timestamp", "left", "right"], how="inner"
     )
 
-    # Calculate Conversation Efficiency Indexs more efficiently
-    # Create a dictionary to store accumulated scores and counts for each model
-    model_rcs_sum = {}
-    model_rcs_max = {}
+    # Create dictionaries to track scores and match counts
+    model_stats = {}
 
     # Process each row once and accumulate scores
     for _, row in all_df.iterrows():
-        # Determine scores based on winner
+        left_model = row["left"]
+        right_model = row["right"]
+        is_self_match = left_model == right_model
+        
+        # Initialize dictionaries for models if they don't exist yet
+        for model in [left_model, right_model]:
+            if model not in model_stats:
+                model_stats[model] = {
+                    "cei_sum": 0,      # Sum of per-round scores
+                    "cei_max": 0,      # Sum of per-round maximums
+                    "self_matches": 0, # Count of self-matches
+                    "self_draws": 0    # Count of draws in self-matches
+                }
+        
+        # Handle self-matches (same model on both sides)
+        if is_self_match:
+            model_stats[left_model]["self_matches"] += 1
+            if row["winner"] == evalica.Winner.Draw:
+                model_stats[left_model]["self_draws"] += 1
+            continue
+        
+        # Determine scores based on winner for competitive matches
         match row["winner"]:
             case evalica.Winner.X:
-                left_score = 1.0
-                right_score = -1.0
+                left_score = 1
+                right_score = -1
             case evalica.Winner.Y:
-                left_score = -1.0
-                right_score = 1.0
+                left_score = -1
+                right_score = 1
             case _:  # Draw
                 left_score = 0.1
                 right_score = 0.1
-
+        
         # Count rounds for each side
         left_round = sum(1 for msg in row["left_chat"] if msg["role"] == "assistant")
         right_round = sum(1 for msg in row["right_chat"] if msg["role"] == "assistant")
+        
+        # Update CEI metrics
+        model_stats[left_model]["cei_max"] += 1 / left_round
+        model_stats[right_model]["cei_max"] += 1 / right_round
+        model_stats[left_model]["cei_sum"] += left_score / left_round
+        model_stats[right_model]["cei_sum"] += right_score / right_round
 
-        left_model = row["left"]
-        right_model = row["right"]
+    # Calculate CEI results
+    cei_result = {}
+    for model in elo_result.scores.index:
+        if model in model_stats and model_stats[model]["cei_max"] > 0:
+            cei_result[model] = round(model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2)
+        else:
+            cei_result[model] = "N/A"
+    cei_result = pd.Series(cei_result)
 
-        model_rcs_max[left_model] = model_rcs_max.get(left_model, 0) + 1.0 / left_round
-        model_rcs_max[right_model] = (
-            model_rcs_max.get(right_model, 0) + 1.0 / right_round
-        )
-
-        # Calculate per-round scores
-        model_rcs_sum[left_model] = (
-            model_rcs_sum.get(left_model, 0) + left_score / left_round
-        )
-        model_rcs_sum[right_model] = (
-            model_rcs_sum.get(right_model, 0) + right_score / right_round
-        )
-
-    cei_result = {
-        model: model_rcs_sum[model] / model_rcs_max[model] for model in model_rcs_sum
-    }
-    cei_result = pd.Series(
-        {model: cei_result[model] for model in elo_result.scores.index}
-    )
-
-    self_matches = vote_df[vote_df["left"] == vote_df["right"]]
-    model_matches = self_matches.groupby("left")
-    draw_counts = model_matches["winner"].apply(
-        lambda x: (x == evalica.Winner.Draw).sum()
-    )
-    total_counts = model_matches.size()
-    mcs_result = (
-        (draw_counts / total_counts)
-        .round(2)
-        .reindex(elo_result.scores.index, fill_value="N/A")
-    )
+    # Calculate MCS results
+    mcs_result = {}
+    for model in elo_result.scores.index:
+        if model in model_stats and model_stats[model]["self_matches"] > 0:
+            mcs_result[model] = round(model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2)
+        else:
+            mcs_result[model] = "N/A"
+    mcs_result = pd.Series(mcs_result)
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
@@ -496,7 +504,6 @@ def get_leaderboard_data(vote_entry=None):
     leaderboard_data = leaderboard_data.round(
         {
             "Elo Score": 2,
-            "Conversation Efficiency Index": 2,
             "Average Win Rate": 2,
             "Bradley-Terry Coefficient": 2,
             "Eigenvector Centrality Value": 2,
