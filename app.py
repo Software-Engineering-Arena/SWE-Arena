@@ -266,7 +266,9 @@ def chat_with_models(model_alias, models, conversation_state, timeout=TIMEOUT):
         )
 
         # Format the complete conversation history with different colors
-        formatted_history = format_conversation_history(conversation_state[model_key][1:])
+        formatted_history = format_conversation_history(
+            conversation_state[model_key][1:]
+        )
 
         return formatted_history
 
@@ -294,7 +296,7 @@ def format_conversation_history(conversation_history):
     return formatted_text
 
 
-def save_content_to_hf(feedback_data, repo_name):
+def save_content_to_hf(feedback_data, repo_name, folder_name, file_name):
     """
     Save feedback content to Hugging Face repository organized by quarter.
     """
@@ -304,14 +306,8 @@ def save_content_to_hf(feedback_data, repo_name):
     # Create a binary file-like object
     file_like_object = io.BytesIO(json_content)
 
-    # Get the current year and quarter
-    now = datetime.now()
-    quarter = (now.month - 1) // 3 + 1
-    year_quarter = f"{now.year}_Q{quarter}"
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
-
     # Define the path in the repository
-    filename = f"{year_quarter}/{timestamp}.json"
+    filename = f"{folder_name}/{file_name}.json"
 
     # Ensure the user is authenticated with HF
     token = HfFolder.get_token()
@@ -779,11 +775,13 @@ with gr.Blocks() as app:
 
             # Create a copy to avoid modifying the original
             conversations = models.copy()
-            conversations.update({
-                "url": repo_url,
-                "left_chat": [{"role": "user", "content": combined_user_input}],
-                "right_chat": [{"role": "user", "content": combined_user_input}]
-            })
+            conversations.update(
+                {
+                    "url": repo_url,
+                    "left_chat": [{"role": "user", "content": combined_user_input}],
+                    "right_chat": [{"role": "user", "content": combined_user_input}],
+                }
+            )
 
             # Clear previous states
             models_state.clear()
@@ -1006,7 +1004,9 @@ with gr.Blocks() as app:
         # Handle subsequent rounds
         def handle_model_a_send(user_input, models_state, conversation_state):
             try:
-                conversation_state["left_chat"].append({"role": "user", "content": user_input})
+                conversation_state["left_chat"].append(
+                    {"role": "user", "content": user_input}
+                )
                 response = chat_with_models("left", models_state, conversation_state)
                 # Clear the input box and disable the send button
                 return (
@@ -1045,7 +1045,9 @@ with gr.Blocks() as app:
 
         def handle_model_b_send(user_input, models_state, conversation_state):
             try:
-                conversation_state["right_chat"].append({"role": "user", "content": user_input})
+                conversation_state["right_chat"].append(
+                    {"role": "user", "content": user_input}
+                )
                 response = chat_with_models("right", models_state, conversation_state)
                 # Clear the input box and disable the send button
                 return (
@@ -1121,8 +1123,14 @@ with gr.Blocks() as app:
                 "winner": winner_model,
             }
 
+            # Get the current year and quarter
+            now = datetime.now()
+            quarter = (now.month - 1) // 3 + 1
+            folder_name = f"{now.year}_Q{quarter}"
+            file_name = now.strftime("%Y%m%d_%H%M%S")
+
             # Save feedback back to the Hugging Face dataset
-            save_content_to_hf(feedback_entry, "SE-Arena/votes")
+            save_content_to_hf(feedback_entry, "SE-Arena/votes", folder_name, file_name)
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
                 "right_chat"
@@ -1132,7 +1140,9 @@ with gr.Blocks() as app:
             ][0]["content"].split("\n\nInquiry: ")[-1]
 
             # Save conversations back to the Hugging Face dataset
-            save_content_to_hf(conversation_state, "SE-Arena/conversations")
+            save_content_to_hf(
+                conversation_state, "SE-Arena/conversations", folder_name, file_name
+            )
 
             # Clear state
             models_state.clear()
