@@ -296,12 +296,12 @@ def format_conversation_history(conversation_history):
     return formatted_text
 
 
-def save_content_to_hf(feedback_data, repo_name, folder_name, file_name):
+def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
     """
     Save feedback content to Hugging Face repository organized by quarter.
     """
     # Serialize the content to JSON and encode it as bytes
-    json_content = json.dumps(feedback_data, indent=4).encode("utf-8")
+    json_content = json.dumps(vote_data, indent=4).encode("utf-8")
 
     # Create a binary file-like object
     file_like_object = io.BytesIO(json_content)
@@ -334,7 +334,7 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
     Returns:
         list: Aggregated feedback data read from the repository.
     """
-    feedback_data = []
+    vote_data = []
 
     # Get the current year and quarter
     now = datetime.now()
@@ -354,35 +354,31 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
             )
             with open(local_path, "r") as f:
                 data = json.load(f)
-                feedback_data.append(data)
-        return feedback_data
+                data["timestamp"] = file.split("/")[-1].split(".")[0]
+                vote_data.append(data)
+        return vote_data
 
     except:
         raise Exception("Error loading feedback data from Hugging Face repository.")
 
 
-def get_leaderboard_data(feedback_entry=None):
+def get_leaderboard_data(vote_entry=None):
     # Load feedback data from the Hugging Face repository
-    feedback_data = load_content_from_hf()
-    feedback_df = pd.DataFrame(feedback_data)
-
-    # Load conversation data from the Hugging Face repository
-    conversation_data = load_content_from_hf("SE-Arena/conversations")
-    conversation_df = pd.DataFrame(conversation_data)
+    vote_data = load_content_from_hf()
+    vote_df = pd.DataFrame(vote_data)
 
     # Concatenate the new feedback with the existing leaderboard data
-    if feedback_entry is not None:
-        feedback_df = pd.concat(
-            [feedback_df, pd.DataFrame([feedback_entry])], ignore_index=True
-        )
+    if vote_entry is not None:
+        vote_df = pd.concat([vote_df, pd.DataFrame([vote_entry])], ignore_index=True)
 
-    if feedback_df.empty:
+    if vote_df.empty:
         return pd.DataFrame(
             columns=[
                 "Rank",
                 "Model",
                 "Elo Score",
-                "Consistency Score",
+                "Conversation Efficiency Index",
+                "Model Consistency Score",
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
@@ -392,7 +388,7 @@ def get_leaderboard_data(feedback_entry=None):
         )
 
     # map vote to winner
-    feedback_df["winner"] = feedback_df["winner"].map(
+    vote_df["winner"] = vote_df["winner"].map(
         {
             "left": evalica.Winner.X,
             "right": evalica.Winner.Y,
@@ -402,51 +398,76 @@ def get_leaderboard_data(feedback_entry=None):
 
     # Calculate scores using various metrics
     avr_result = evalica.average_win_rate(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+        vote_df["left"], vote_df["right"], vote_df["winner"]
     )
     bt_result = evalica.bradley_terry(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+        vote_df["left"], vote_df["right"], vote_df["winner"]
     )
-    newman_result = evalica.newman(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    eigen_result = evalica.eigen(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
-    elo_result = evalica.elo(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
-    )
+    newman_result = evalica.newman(vote_df["left"], vote_df["right"], vote_df["winner"])
+    eigen_result = evalica.eigen(vote_df["left"], vote_df["right"], vote_df["winner"])
+    elo_result = evalica.elo(vote_df["left"], vote_df["right"], vote_df["winner"])
     pagerank_result = evalica.pagerank(
-        feedback_df["left"], feedback_df["right"], feedback_df["winner"]
+        vote_df["left"], vote_df["right"], vote_df["winner"]
     )
+    
+    # Load conversation data from the Hugging Face repository
+    conversation_data = load_content_from_hf("SE-Arena/conversations")
+    conversation_df = pd.DataFrame(conversation_data)
 
-    # Calculate consistency score as a pandas Series aligned with other metrics
-    cs_result = pd.Series(
-        "N/A", index=elo_result.scores.index
-    )  # Initialize with zeros using same index
+    # Merge vote data with conversation data
+    all_df = pd.merge(
+        vote_df, conversation_df, on=["timestamp", "left", "right"], how="inner"
+    )
+    
+    # Calculate Conversation Efficiency Indexs more efficiently
+    # Create a dictionary to store accumulated scores and counts for each model
+    model_rcs_sum = {}
+    model_rcs_max = {}
+    
+    # Process each row once and accumulate scores
+    for _, row in all_df.iterrows():
+        # Determine scores based on winner
+        match row["winner"]: 
+            case evalica.Winner.X:
+                left_score = 1.0
+                right_score = -1.0
+            case evalica.Winner.Y:
+                left_score = -1.0
+                right_score = 1.0
+            case _:  # Draw
+                left_score = 0.1
+                right_score = 0.1
+        
+        # Count rounds for each side
+        left_round = sum(1 for msg in row["left_chat"] if msg["role"] == "assistant")
+        right_round = sum(1 for msg in row["right_chat"] if msg["role"] == "assistant")
+        
+        left_model = row["left"]
+        right_model = row["right"]
+        
+        model_rcs_max[left_model] = model_rcs_max.get(left_model, 0) + 1.0 / left_round
+        model_rcs_max[right_model] = model_rcs_max.get(right_model, 0) + 1.0 / right_round
+        
+        # Calculate per-round scores
+        model_rcs_sum[left_model] = model_rcs_sum.get(left_model, 0) + left_score / left_round
+        model_rcs_sum[right_model] = model_rcs_sum.get(right_model, 0) + right_score / right_round
 
-    # Loop through models and update values
-    for model in cs_result.index:
-        # Filter self-matches for this model
-        self_matches = feedback_df[
-            (feedback_df["left"] == model) & (feedback_df["right"] == model)
-        ]
-        totals = len(self_matches)
+    cei_result = {model: model_rcs_sum[model] / model_rcs_max[model] for model in model_rcs_sum}
+    cei_result = pd.Series({model: cei_result[model] for model in elo_result.scores.index})
 
-        if totals:
-            # Count non-draw outcomes (wins or losses)
-            cs_result[model] = round(
-                self_matches[self_matches["winner"] == evalica.Winner.Draw].shape[0]
-                / totals,
-                2,
-            )
+    self_matches = vote_df[vote_df["left"] == vote_df["right"]]
+    model_matches = self_matches.groupby("left")
+    draw_counts = model_matches["winner"].apply(lambda x: (x == evalica.Winner.Draw).sum())
+    total_counts = model_matches.size()
+    mcs_result = (draw_counts / total_counts).round(2).reindex(elo_result.scores.index, fill_value="N/A")
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
         {
             "Model": elo_result.scores.index,
             "Elo Score": elo_result.scores.values,
-            "Consistency Score": cs_result.values,
+            "Conversation Efficiency Index": cei_result.values,
+            "Model Consistency Score": mcs_result.values,
             "Average Win Rate": avr_result.scores.values,
             "Bradley-Terry Coefficient": bt_result.scores.values,
             "Eigenvector Centrality Value": eigen_result.scores.values,
@@ -459,6 +480,7 @@ def get_leaderboard_data(feedback_entry=None):
     leaderboard_data = leaderboard_data.round(
         {
             "Elo Score": 2,
+            "Conversation Efficiency Index": 2,
             "Average Win Rate": 2,
             "Bradley-Terry Coefficient": 2,
             "Eigenvector Centrality Value": 2,
@@ -509,12 +531,14 @@ with gr.Blocks() as app:
                 "Rank",
                 "Model",
                 "Elo Score",
-                "Consistency Score",
+                "Conversation Efficiency Index",
+                "Model Consistency Score",
             ],
             search_columns=["Model"],
             filter_columns=[
                 "Elo Score",
-                "Consistency Score",
+                "Conversation Efficiency Index",
+                "Model Consistency Score",
                 "Average Win Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
@@ -1117,7 +1141,7 @@ with gr.Blocks() as app:
                     winner_model = "tie"
 
             # Create feedback entry
-            feedback_entry = {
+            vote_entry = {
                 "left": models_state["left"],
                 "right": models_state["right"],
                 "winner": winner_model,
@@ -1130,7 +1154,7 @@ with gr.Blocks() as app:
             file_name = now.strftime("%Y%m%d_%H%M%S")
 
             # Save feedback back to the Hugging Face dataset
-            save_content_to_hf(feedback_entry, "SE-Arena/votes", folder_name, file_name)
+            save_content_to_hf(vote_entry, "SE-Arena/votes", folder_name, file_name)
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
                 "right_chat"
@@ -1175,7 +1199,7 @@ with gr.Blocks() as app:
                 gr.update(
                     value="Can't Decide", interactive=True
                 ),  # [10] Reset feedback radio selection
-                get_leaderboard_data(feedback_entry),  # [11] Updated leaderboard data
+                get_leaderboard_data(vote_entry),  # [11] Updated leaderboard data
                 gr.update(
                     visible=True
                 ),  # [12] Show the thanks_message markdown component
