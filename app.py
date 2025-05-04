@@ -409,7 +409,7 @@ def get_leaderboard_data(vote_entry=None):
     pagerank_result = evalica.pagerank(
         vote_df["left"], vote_df["right"], vote_df["winner"]
     )
-    
+
     # Load conversation data from the Hugging Face repository
     conversation_data = load_content_from_hf("SE-Arena/conversations")
     conversation_df = pd.DataFrame(conversation_data)
@@ -418,16 +418,16 @@ def get_leaderboard_data(vote_entry=None):
     all_df = pd.merge(
         vote_df, conversation_df, on=["timestamp", "left", "right"], how="inner"
     )
-    
+
     # Calculate Conversation Efficiency Indexs more efficiently
     # Create a dictionary to store accumulated scores and counts for each model
     model_rcs_sum = {}
     model_rcs_max = {}
-    
+
     # Process each row once and accumulate scores
     for _, row in all_df.iterrows():
         # Determine scores based on winner
-        match row["winner"]: 
+        match row["winner"]:
             case evalica.Winner.X:
                 left_score = 1.0
                 right_score = -1.0
@@ -437,29 +437,45 @@ def get_leaderboard_data(vote_entry=None):
             case _:  # Draw
                 left_score = 0.1
                 right_score = 0.1
-        
+
         # Count rounds for each side
         left_round = sum(1 for msg in row["left_chat"] if msg["role"] == "assistant")
         right_round = sum(1 for msg in row["right_chat"] if msg["role"] == "assistant")
-        
+
         left_model = row["left"]
         right_model = row["right"]
-        
-        model_rcs_max[left_model] = model_rcs_max.get(left_model, 0) + 1.0 / left_round
-        model_rcs_max[right_model] = model_rcs_max.get(right_model, 0) + 1.0 / right_round
-        
-        # Calculate per-round scores
-        model_rcs_sum[left_model] = model_rcs_sum.get(left_model, 0) + left_score / left_round
-        model_rcs_sum[right_model] = model_rcs_sum.get(right_model, 0) + right_score / right_round
 
-    cei_result = {model: model_rcs_sum[model] / model_rcs_max[model] for model in model_rcs_sum}
-    cei_result = pd.Series({model: cei_result[model] for model in elo_result.scores.index})
+        model_rcs_max[left_model] = model_rcs_max.get(left_model, 0) + 1.0 / left_round
+        model_rcs_max[right_model] = (
+            model_rcs_max.get(right_model, 0) + 1.0 / right_round
+        )
+
+        # Calculate per-round scores
+        model_rcs_sum[left_model] = (
+            model_rcs_sum.get(left_model, 0) + left_score / left_round
+        )
+        model_rcs_sum[right_model] = (
+            model_rcs_sum.get(right_model, 0) + right_score / right_round
+        )
+
+    cei_result = {
+        model: model_rcs_sum[model] / model_rcs_max[model] for model in model_rcs_sum
+    }
+    cei_result = pd.Series(
+        {model: cei_result[model] for model in elo_result.scores.index}
+    )
 
     self_matches = vote_df[vote_df["left"] == vote_df["right"]]
     model_matches = self_matches.groupby("left")
-    draw_counts = model_matches["winner"].apply(lambda x: (x == evalica.Winner.Draw).sum())
+    draw_counts = model_matches["winner"].apply(
+        lambda x: (x == evalica.Winner.Draw).sum()
+    )
     total_counts = model_matches.size()
-    mcs_result = (draw_counts / total_counts).round(2).reindex(elo_result.scores.index, fill_value="N/A")
+    mcs_result = (
+        (draw_counts / total_counts)
+        .round(2)
+        .reindex(elo_result.scores.index, fill_value="N/A")
+    )
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
@@ -491,7 +507,7 @@ def get_leaderboard_data(vote_entry=None):
 
     # Add a Rank column based on Elo scores
     leaderboard_data["Rank"] = (
-        leaderboard_data["Elo Score"].rank(ascending=False).astype(int)
+        leaderboard_data["Elo Score"].rank(method="min", ascending=False).astype(int)
     )
 
     # Place rank in the first column
