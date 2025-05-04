@@ -358,8 +358,6 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
             )
             with open(local_path, "r") as f:
                 data = json.load(f)
-                # Add the timestamp to the data
-                data["timestamp"] = file.split("/")[-1].split(".")[0]
                 feedback_data.append(data)
         return feedback_data
 
