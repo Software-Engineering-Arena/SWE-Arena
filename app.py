@@ -39,10 +39,6 @@ with open("context_window.json", "r") as file:
 # Get list of available models
 available_models = list(context_window.keys())
 
-# Initialize global variables
-models_state = {}
-conversation_state = {}
-
 
 def fetch_github_content(url):
     """Fetch detailed content from a GitHub URL using PyGithub."""
@@ -188,68 +184,62 @@ def fetch_url_content(url):
 
 
 # Truncate prompt
-def truncate_prompt(user_input, model_alias, models, conversation_state):
+def truncate_prompt(model_alias, models, conversation_state):
     """
     Truncate the conversation history and user input to fit within the model's context window.
 
     Args:
-        user_input (str): The latest input from the user.
-        model_alias (str): Alias for the model being used (e.g., "Model A", "Model B").
+        model_alias (str): Alias for the model being used (i.e., "left", "right").
         models (dict): Dictionary mapping model aliases to their names.
         conversation_state (dict): State containing the conversation history for all models.
 
     Returns:
         str: Truncated conversation history and user input.
     """
-    model_name = models[model_alias]
-    context_length = context_window.get(model_name, 4096)
-
     # Get the full conversation history for the model
-    history = conversation_state.get(model_name, [])
-    full_conversation = [
-        {"role": msg["role"], "content": msg["content"]} for msg in history
-    ]
-    full_conversation.append({"role": "user", "content": user_input})
+    full_conversation = conversation_state[f"{model_alias}_chat"]
 
-    # Convert to JSON string for accurate length measurement
-    json_conversation = json.dumps(full_conversation)
+    # Get the context length for the model
+    context_length = context_window[models[model_alias]]
 
-    if len(json_conversation) <= context_length:
-        # If the full conversation fits, return it as-is
-        return full_conversation
+    # Single loop to handle both FIFO removal and content truncation
+    while len(json.dumps(full_conversation)) > context_length:
+        # If we have more than one message, remove the oldest (FIFO)
+        if len(full_conversation) > 1:
+            full_conversation.pop(0)
+        # If only one message remains, truncate its content
+        else:
+            current_length = len(json.dumps(full_conversation))
+            # Calculate how many characters we need to remove
+            excess = current_length - context_length
+            # Add a buffer to ensure we remove enough (accounting for JSON encoding)
+            truncation_size = min(excess + 10, len(full_conversation[0]["content"]))
 
-    # Truncate based on the current round
-    if not history:  # First round, truncate FILO
-        while len(json.dumps(full_conversation)) > context_length:
-            full_conversation.pop(0)  # Remove from the start
-    else:  # Subsequent rounds, truncate FIFO
-        while len(json.dumps(full_conversation)) > context_length:
-            full_conversation.pop(-1)  # Remove from the end
+            if truncation_size <= 0:
+                break  # Can't truncate further
+
+            # Truncate the content from the end to fit
+            full_conversation[0]["content"] = full_conversation[0]["content"][
+                :-truncation_size
+            ]
 
     return full_conversation
 
 
-def chat_with_models(
-    user_input, model_alias, models, conversation_state, timeout=TIMEOUT
-):
-    model_name = models[model_alias]
-    truncated_input = truncate_prompt(
-        user_input, model_alias, models, conversation_state
-    )
-    conversation_state.setdefault(model_name, []).append(
-        {"role": "user", "content": user_input}
-    )
-
+def chat_with_models(model_alias, models, conversation_state, timeout=TIMEOUT):
+    truncated_input = truncate_prompt(model_alias, models, conversation_state)
     response_event = threading.Event()  # Event to signal response completion
     model_response = {"content": None, "error": None}
 
     def request_model_response():
         try:
-            request_params = {"model": model_name, "messages": truncated_input}
+            request_params = {"model": models[model_alias], "messages": truncated_input}
             response = openai_client.chat.completions.create(**request_params)
             model_response["content"] = response.choices[0].message.content
         except Exception as e:
-            model_response["error"] = f"{model_name} model is not available. Error: {e}"
+            model_response["error"] = (
+                f"{models[model_alias]} model is not available. Error: {e}"
+            )
         finally:
             response_event.set()  # Signal that the response is completed
 
@@ -267,37 +257,40 @@ def chat_with_models(
     elif model_response["error"]:
         raise Exception(model_response["error"])
     else:
+        # Get the full conversation history for the model
+        model_key = f"{model_alias}_chat"
+
         # Add the model's response to the conversation state
-        conversation_state[model_name].append(
+        conversation_state[model_key].append(
             {"role": "assistant", "content": model_response["content"]}
         )
-        
+
         # Format the complete conversation history with different colors
-        formatted_history = format_conversation_history(conversation_state[model_name])
-        
+        formatted_history = format_conversation_history(conversation_state[model_key][1:])
+
         return formatted_history
 
 
 def format_conversation_history(conversation_history):
     """
     Format the conversation history with different colors for user and model messages.
-    
+
     Args:
         conversation_history (list): List of conversation messages with role and content.
-        
+
     Returns:
         str: Markdown formatted conversation history.
     """
     formatted_text = ""
-    
+
     for message in conversation_history:
         if message["role"] == "user":
             # Format user messages with blue text
             formatted_text += f"<div style='color: #0066cc; background-color: #f0f7ff; padding: 10px; border-radius: 5px; margin-bottom: 10px;'><strong>User:</strong> {message['content']}</div>\n\n"
-        else:  # assistant/model messages
-            # Format model messages with dark green text
+        else:
+            # Format assistant messages with dark green text
             formatted_text += f"<div style='color: #006633; background-color: #f0fff0; padding: 10px; border-radius: 5px; margin-bottom: 10px;'><strong>Model:</strong> {message['content']}</div>\n\n"
-    
+
     return formatted_text
 
 
@@ -315,10 +308,10 @@ def save_content_to_hf(feedback_data, repo_name):
     now = datetime.now()
     quarter = (now.month - 1) // 3 + 1
     year_quarter = f"{now.year}_Q{quarter}"
-    day_hour_minute_second = now.strftime("%d_%H%M%S")
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
 
     # Define the path in the repository
-    filename = f"{year_quarter}/{day_hour_minute_second}.json"
+    filename = f"{year_quarter}/{timestamp}.json"
 
     # Ensure the user is authenticated with HF
     token = HfFolder.get_token()
@@ -365,11 +358,9 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
             )
             with open(local_path, "r") as f:
                 data = json.load(f)
-                if isinstance(data, list):
-                    feedback_data.extend(data)
-                elif isinstance(data, dict):
-                    feedback_data.append(data)
-
+                # Add the timestamp to the data
+                data["timestamp"] = file.split("/")[-1].split(".")[0]
+                feedback_data.append(data)
         return feedback_data
 
     except:
@@ -380,6 +371,10 @@ def get_leaderboard_data(feedback_entry=None):
     # Load feedback data from the Hugging Face repository
     feedback_data = load_content_from_hf()
     feedback_df = pd.DataFrame(feedback_data)
+
+    # Load conversation data from the Hugging Face repository
+    conversation_data = load_content_from_hf("SE-Arena/conversations")
+    conversation_df = pd.DataFrame(conversation_data)
 
     # Concatenate the new feedback with the existing leaderboard data
     if feedback_entry is not None:
@@ -432,12 +427,12 @@ def get_leaderboard_data(feedback_entry=None):
     )
 
     # Calculate consistency score as a pandas Series aligned with other metrics
-    is_result = pd.Series(
+    cs_result = pd.Series(
         "N/A", index=elo_result.scores.index
     )  # Initialize with zeros using same index
 
     # Loop through models and update values
-    for model in is_result.index:
+    for model in cs_result.index:
         # Filter self-matches for this model
         self_matches = feedback_df[
             (feedback_df["left"] == model) & (feedback_df["right"] == model)
@@ -446,17 +441,19 @@ def get_leaderboard_data(feedback_entry=None):
 
         if totals:
             # Count non-draw outcomes (wins or losses)
-            draws = self_matches[self_matches["winner"] == evalica.Winner.Draw].shape[0]
-            # Store as percentage directly
-            is_result[model] = round(draws / totals * 100, 2)
+            cs_result[model] = round(
+                self_matches[self_matches["winner"] == evalica.Winner.Draw].shape[0]
+                / totals,
+                2,
+            )
 
     # Combine all results into a single DataFrame
     leaderboard_data = pd.DataFrame(
         {
             "Model": elo_result.scores.index,
             "Elo Score": elo_result.scores.values,
-            "Consistency Score": is_result.values,
-            "Average Win Rate": avr_result.scores.values * 100,
+            "Consistency Score": cs_result.values,
+            "Average Win Rate": avr_result.scores.values,
             "Bradley-Terry Coefficient": bt_result.scores.values,
             "Eigenvector Centrality Value": eigen_result.scores.values,
             "Newman Modularity Score": newman_result.scores.values,
@@ -507,7 +504,7 @@ with gr.Blocks() as app:
         leaderboard_intro = gr.Markdown(
             """
             # 🏆 FM4SE Leaderboard: Community-Driven Evaluation of Top Foundation Models (FMs) in Software Engineering (SE) Tasks
-            The SE Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. Developed by researchers at [Software Analysis and Intelligence Lab (SAIL)](https://sail.cs.queensu.ca), the platform empowers the community to assess and compare the performance of leading FMs in SE tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
+            The SE Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. This platform aims to empower the SE community to assess and compare the performance of leading FMs in related tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
             """,
             elem_classes="leaderboard-intro",
         )
@@ -678,9 +675,9 @@ with gr.Blocks() as app:
             ],
         )
 
-        def guardrail_check_se_relevance(user_prompt):
+        def guardrail_check_se_relevance(user_input):
             """
-            Use gpt-4o-mini to check if the user_prompt is SE-related.
+            Use gpt-4o-mini to check if the user input is SE-related.
             Return True if it is SE-related, otherwise False.
             """
             # Example instructions for classification — adjust to your needs
@@ -692,7 +689,7 @@ with gr.Blocks() as app:
                     "Otherwise, respond with 'No'."
                 ),
             }
-            user_message = {"role": "user", "content": user_prompt}
+            user_message = {"role": "user", "content": user_input}
 
             try:
                 # Make the chat completion call
@@ -770,31 +767,37 @@ with gr.Blocks() as app:
                     gr.update(visible=False),
                 )
 
+            # Fetch repository info if a URL is provided
             repo_info = fetch_url_content(repo_url)
-            # Combine repository info (if available) with the user query.
             combined_user_input = (
-                f"Repo-related Information: {repo_info}\n\n{user_input}"
+                f"Context: {repo_info}\n\nInquiry: {user_input}"
                 if repo_info
                 else user_input
             )
 
             # Randomly select two models for the comparison
             selected_models = [random.choice(available_models) for _ in range(2)]
-            models = {"Model A": selected_models[0], "Model B": selected_models[1]}
+            models = {"left": selected_models[0], "right": selected_models[1]}
+
+            # Create a copy to avoid modifying the original
+            conversations = models.copy()
+            conversations.update({
+                "url": repo_url,
+                "left_chat": [{"role": "user", "content": combined_user_input}],
+                "right_chat": [{"role": "user", "content": combined_user_input}]
+            })
+
+            # Clear previous states
+            models_state.clear()
+            conversation_state.clear()
 
             # Update the states
-            models_state.clear()
             models_state.update(models)
-            conversation_state.clear()
-            conversation_state.update({name: [] for name in models.values()})
+            conversation_state.update(conversations)
 
             try:
-                response_a = chat_with_models(
-                    combined_user_input, "Model A", models_state, conversation_state
-                )
-                response_b = chat_with_models(
-                    combined_user_input, "Model B", models_state, conversation_state
-                )
+                response_a = chat_with_models("left", models_state, conversation_state)
+                response_b = chat_with_models("right", models_state, conversation_state)
             except TimeoutError as e:
                 # Handle timeout by resetting components and showing a popup.
                 return (
@@ -841,6 +844,9 @@ with gr.Blocks() as app:
             # Determine the initial state of the multi-round send buttons
             model_a_send_state = toggle_submit_button("")
             model_b_send_state = toggle_submit_button("")
+            display_content = f"### Your Query:\n\n{user_input}"
+            if repo_info:
+                display_content += f"\n\n### Repo-related URL:\n\n{repo_url}"
 
             # Return the updates for all 18 outputs.
             return (
@@ -851,7 +857,7 @@ with gr.Blocks() as app:
                 # [2] repo_url: re-enable but hide
                 gr.update(interactive=True, visible=False),
                 # [3] user_prompt_md: display the user's query
-                gr.update(value=f"**Your Query:**\n\n{user_input}", visible=True),
+                gr.update(value=display_content, visible=True),
                 # [4] response_a_title: show title for Model A
                 gr.update(value="### Model A:", visible=True),
                 # [5] response_b_title: show title for Model B
@@ -1002,9 +1008,8 @@ with gr.Blocks() as app:
         # Handle subsequent rounds
         def handle_model_a_send(user_input, models_state, conversation_state):
             try:
-                response = chat_with_models(
-                    user_input, "Model A", models_state, conversation_state
-                )
+                conversation_state["left_chat"].append({"role": "user", "content": user_input})
+                response = chat_with_models("left", models_state, conversation_state)
                 # Clear the input box and disable the send button
                 return (
                     response,
@@ -1042,9 +1047,8 @@ with gr.Blocks() as app:
 
         def handle_model_b_send(user_input, models_state, conversation_state):
             try:
-                response = chat_with_models(
-                    user_input, "Model B", models_state, conversation_state
-                )
+                conversation_state["right_chat"].append({"role": "user", "content": user_input})
+                response = chat_with_models("right", models_state, conversation_state)
                 # Clear the input box and disable the send button
                 return (
                     response,
@@ -1114,14 +1118,20 @@ with gr.Blocks() as app:
 
             # Create feedback entry
             feedback_entry = {
-                "left": models_state["Model A"],
-                "right": models_state["Model B"],
+                "left": models_state["left"],
+                "right": models_state["right"],
                 "winner": winner_model,
-                "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
             }
 
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(feedback_entry, "SE-Arena/votes")
+
+            conversation_state["right_chat"][0]["content"] = conversation_state[
+                "right_chat"
+            ][0]["content"].split("\n\nInquiry: ")[-1]
+            conversation_state["left_chat"][0]["content"] = conversation_state[
+                "left_chat"
+            ][0]["content"].split("\n\nInquiry: ")[-1]
 
             # Save conversations back to the Hugging Face dataset
             save_content_to_hf(conversation_state, "SE-Arena/conversations")
@@ -1193,7 +1203,7 @@ with gr.Blocks() as app:
             
             - The service is a **research preview**. It only provides limited safety measures and may generate offensive content.
             - It must not be used for any **illegal, harmful, violent, racist, or sexual** purposes.
-            - Please do not upload any **private information**.
+            - Please do not upload any **private** information.
             - The service collects user dialogue data, including both text and images, and reserves the right to distribute it under a **Creative Commons Attribution (CC-BY)** or a similar license.
             """
         )
