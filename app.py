@@ -1,3 +1,7 @@
+# References for model evaluation metrics:
+# - Chatbot Arena: https://colab.research.google.com/drive/1KdwokPjirkTmpO_P1WByFNFiqxWQquwH
+# - Evalica: https://github.com/dustalov/evalica/blob/master/Chatbot-Arena.ipynb
+
 import dotenv
 import evalica
 import gitlab
@@ -380,35 +384,13 @@ def get_leaderboard_data(vote_entry=None):
                 "Conversation Efficiency Index",
                 "Model Consistency Score",
                 "Average Win Rate",
+                "Average Failure Rate",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
                 "Newman Modularity Score",
                 "PageRank Score",
             ]
         )
-
-    # map vote to winner
-    vote_df["winner"] = vote_df["winner"].map(
-        {
-            "left": evalica.Winner.X,
-            "right": evalica.Winner.Y,
-            "tie": evalica.Winner.Draw,
-        }
-    )
-
-    # Calculate scores using various metrics
-    avr_result = evalica.average_win_rate(
-        vote_df["left"], vote_df["right"], vote_df["winner"]
-    )
-    bt_result = evalica.bradley_terry(
-        vote_df["left"], vote_df["right"], vote_df["winner"]
-    )
-    newman_result = evalica.newman(vote_df["left"], vote_df["right"], vote_df["winner"])
-    eigen_result = evalica.eigen(vote_df["left"], vote_df["right"], vote_df["winner"])
-    elo_result = evalica.elo(vote_df["left"], vote_df["right"], vote_df["winner"])
-    pagerank_result = evalica.pagerank(
-        vote_df["left"], vote_df["right"], vote_df["winner"]
-    )
 
     # Load conversation data from the Hugging Face repository
     conversation_data = load_content_from_hf("SE-Arena/conversations")
@@ -427,51 +409,89 @@ def get_leaderboard_data(vote_entry=None):
         left_model = row["left"]
         right_model = row["right"]
         is_self_match = left_model == right_model
-        
+
         # Initialize dictionaries for models if they don't exist yet
         for model in [left_model, right_model]:
             if model not in model_stats:
                 model_stats[model] = {
-                    "cei_sum": 0,      # Sum of per-round scores
-                    "cei_max": 0,      # Sum of per-round maximums
-                    "self_matches": 0, # Count of self-matches
-                    "self_draws": 0    # Count of draws in self-matches
+                    "cei_sum": 0,  # Sum of per-round scores
+                    "cei_max": 0,  # Sum of per-round maximums
+                    "self_matches": 0,  # Count of self-matches
+                    "self_draws": 0,  # Count of draws in self-matches
                 }
-        
+
         # Handle self-matches (same model on both sides)
         if is_self_match:
             model_stats[left_model]["self_matches"] += 1
-            if row["winner"] == evalica.Winner.Draw:
+            if row["winner"] == "both_bad" or row["winner"] == "tie":
                 model_stats[left_model]["self_draws"] += 1
             continue
-        
+
         # Determine scores based on winner for competitive matches
         match row["winner"]:
-            case evalica.Winner.X:
+            case "left":
                 left_score = 1
                 right_score = -1
-            case evalica.Winner.Y:
+            case "right":
                 left_score = -1
                 right_score = 1
-            case _:  # Draw
-                left_score = 0.1
-                right_score = 0.1
-        
+            case "tie":
+                left_score = 0.3
+                right_score = 0.3
+            case "both_bad":
+                left_score = -0.3
+                right_score = -0.3
+
         # Count rounds for each side
         left_round = sum(1 for msg in row["left_chat"] if msg["role"] == "assistant")
         right_round = sum(1 for msg in row["right_chat"] if msg["role"] == "assistant")
-        
+
         # Update CEI metrics
         model_stats[left_model]["cei_max"] += 1 / left_round
         model_stats[right_model]["cei_max"] += 1 / right_round
         model_stats[left_model]["cei_sum"] += left_score / left_round
         model_stats[right_model]["cei_sum"] += right_score / right_round
 
+    # map vote to winner
+    vote_df["winner"] = vote_df["winner"].map(
+        {
+            "left": evalica.Winner.X,
+            "right": evalica.Winner.Y,
+            "tie": evalica.Winner.Draw,
+            "both_bad": evalica.Winner.Draw,
+        }
+    )
+
+    # Calculate scores using various metrics
+    avr_result = evalica.average_win_rate(
+        vote_df["left"],
+        vote_df["right"],
+        vote_df["winner"],
+        tie_weight=0,  # Chatbot Arena excludes ties
+    )
+    bt_result = evalica.bradley_terry(
+        vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
+    )
+    newman_result = evalica.newman(
+        vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
+    )
+    eigen_result = evalica.eigen(
+        vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
+    )
+    elo_result = evalica.elo(
+        vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
+    )
+    pagerank_result = evalica.pagerank(
+        vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
+    )
+
     # Calculate CEI results
     cei_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["cei_max"] > 0:
-            cei_result[model] = round(model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2)
+            cei_result[model] = round(
+                model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2
+            )
         else:
             cei_result[model] = "N/A"
     cei_result = pd.Series(cei_result)
@@ -480,7 +500,9 @@ def get_leaderboard_data(vote_entry=None):
     mcs_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["self_matches"] > 0:
-            mcs_result[model] = round(model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2)
+            mcs_result[model] = round(
+                model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2
+            )
         else:
             mcs_result[model] = "N/A"
     mcs_result = pd.Series(mcs_result)
@@ -934,10 +956,10 @@ with gr.Blocks() as app:
         # Feedback panel, initially hidden
         with gr.Row(visible=False) as vote_panel:
             feedback = gr.Radio(
-                choices=["Model A", "Model B", "Can't Decide"],
+                choices=["Model A", "Model B", "Tie", "Tie (Both Bad)"],
                 label="Which model do you prefer?",
-                value="Can't Decide",
-                interactive=False,  # Initially not interactive
+                value="Tie",
+                interactive=False,
             )
             submit_feedback_btn = gr.Button("Submit Feedback", interactive=False)
 
@@ -1160,8 +1182,10 @@ with gr.Blocks() as app:
                     winner_model = "left"
                 case "Model B":
                     winner_model = "right"
-                case "Can't Decide":
+                case "Tie":
                     winner_model = "tie"
+                case _:
+                    winner_model = "both_bad"
 
             # Create feedback entry
             vote_entry = {
@@ -1220,7 +1244,7 @@ with gr.Blocks() as app:
                     value="Submit", interactive=True, visible=True
                 ),  # [9] Reset send_first button
                 gr.update(
-                    value="Can't Decide", interactive=True
+                    value="Tie", interactive=True
                 ),  # [10] Reset feedback radio selection
                 get_leaderboard_data(vote_entry),  # [11] Updated leaderboard data
                 gr.update(
