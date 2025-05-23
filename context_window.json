@@ -5,6 +5,8 @@
     "claude-3-5-sonnet-20241022": 200000,
     "claude-3-7-sonnet-latest": 200000,
     "claude-3-7-sonnet-20250219#thinking": 200000,
+    "claude-opus-4-20250514": 200000,
+    "claude-sonnet-4-20250514": 200000,
     "deepseek-chat": 64000,
     "deepseek-r1": 64000,
     "gemini-1.5-flash": 1048576,
