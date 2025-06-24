@@ -302,7 +302,7 @@ def format_conversation_history(conversation_history):
 
 def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
     """
-    Save feedback content to Hugging Face repository organized by quarter.
+    Save feedback content to Hugging Face repository.
     """
     # Serialize the content to JSON and encode it as bytes
     json_content = json.dumps(vote_data, indent=4).encode("utf-8")
@@ -330,7 +330,7 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
 
 def load_content_from_hf(repo_name="SE-Arena/votes"):
     """
-    Read feedback content from a Hugging Face repository based on the current quarter.
+    Read feedback content from a Hugging Face repository based on the current year.
 
     Args:
         repo_name (str): Hugging Face repository name.
@@ -339,18 +339,14 @@ def load_content_from_hf(repo_name="SE-Arena/votes"):
         list: Aggregated feedback data read from the repository.
     """
     vote_data = []
-
-    # Get the current year and quarter
-    now = datetime.now()
-    quarter = (now.month - 1) // 3 + 1
-    year_quarter = f"{now.year}_Q{quarter}"
+    year = str(datetime.now().year)
 
     try:
         api = HfApi()
         # List all files in the repository
         for file in api.list_repo_files(repo_id=repo_name, repo_type="dataset"):
-            # Filter files by current year and month
-            if year_quarter not in file:
+            # Filter files by current year
+            if year not in file:
                 continue
             # Download and aggregate data
             local_path = hf_hub_download(
@@ -1194,10 +1190,9 @@ with gr.Blocks() as app:
                 "winner": winner_model,
             }
 
-            # Get the current year and quarter
+            # Get the current year
             now = datetime.now()
-            quarter = (now.month - 1) // 3 + 1
-            folder_name = f"{now.year}_Q{quarter}"
+            folder_name = now.year
             file_name = now.strftime("%Y%m%d_%H%M%S")
 
             # Save feedback back to the Hugging Face dataset
