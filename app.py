@@ -736,7 +736,7 @@ with gr.Blocks() as app:
 
         def guardrail_check_se_relevance(user_input):
             """
-            Use gpt-4o-mini to check if the user input is SE-related.
+            Use gpt-5-nano to check if the user input is SE-related.
             Return True if it is SE-related, otherwise False.
             """
             # Example instructions for classification — adjust to your needs
@@ -753,7 +753,7 @@ with gr.Blocks() as app:
             try:
                 # Make the chat completion call
                 response = openai_client.chat.completions.create(
-                    model="gpt-4o-mini", messages=[system_message, user_message]
+                    model="gpt-5-nano", messages=[system_message, user_message]
                 )
                 classification = response.choices[0].message.content.strip().lower()
                 # Check if the LLM responded with 'Yes'
