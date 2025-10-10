@@ -28,7 +28,7 @@ Welcome to **SWE-Arena**, an open-source platform designed for evaluating softwa
 
 ## Why SWE-Arena?
 
-Existing evaluation frameworks (e.g. [LMArena]([url](https://lmarena.ai))) often don't address the complex, iterative nature of SE tasks. SWE-Arena fills critical gaps by:
+Existing evaluation frameworks (e.g. [LMArena](https://lmarena.ai)) often don't address the complex, iterative nature of SE tasks. SWE-Arena fills critical gaps by:
 
 - Supporting context-rich, multi-turn evaluations to capture iterative workflows
 - Integrating repository-level context through RepoChat to simulate real-world development scenarios
