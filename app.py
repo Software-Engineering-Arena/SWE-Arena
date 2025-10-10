@@ -362,7 +362,36 @@ def load_content_from_hf(repo_name="SWE-Arena/model_votes"):
         raise Exception("Error loading feedback data from Hugging Face repository.")
 
 
-def get_leaderboard_data(vote_entry=None):
+def get_leaderboard_data(vote_entry=None, use_cache=True):
+    year = str(datetime.now().year)
+    
+    # Try to load cached leaderboard first
+    if use_cache:
+        try:
+            cached_path = hf_hub_download(
+                repo_id="SWE-Arena/model_leaderboards",
+                filename=f"{year}.json",
+                repo_type="dataset"
+            )
+            with open(cached_path, "r") as f:
+                leaderboard_data = pd.read_json(f)
+                # Round all numeric columns to two decimal places
+                leaderboard_data = leaderboard_data.round(
+                    {
+                        "Elo Score": 2,
+                        "Conversation Efficiency Index": 2,
+                        "Model Consistency Score": 2,
+                        "Average Win Rate": 2,
+                        "Bradley-Terry Coefficient": 2,
+                        "Eigenvector Centrality Value": 2,
+                        "Newman Modularity Score": 2,
+                        "PageRank Score": 2,
+                    }
+                )
+                return leaderboard_data
+        except Exception as e:
+            print(f"No cached leaderboard found for {year}, computing from votes...")
+    
     # Load feedback data from the Hugging Face repository
     vote_data = load_content_from_hf()
     vote_df = pd.DataFrame(vote_data)
@@ -481,26 +510,26 @@ def get_leaderboard_data(vote_entry=None):
         vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
     )
 
+    # Clean up potential inf/NaN values in the results
+    for result in [avr_result, bt_result, newman_result, eigen_result, elo_result, pagerank_result]:
+        result.scores = result.scores.replace([float('inf'), float('-inf')], float('nan'))
+
     # Calculate CEI results
     cei_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["cei_max"] > 0:
-            cei_result[model] = round(
-                model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2
-            )
+            cei_result[model] = round(model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2)
         else:
-            cei_result[model] = "N/A"
+            cei_result[model] = None
     cei_result = pd.Series(cei_result)
 
     # Calculate MCS results
     mcs_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["self_matches"] > 0:
-            mcs_result[model] = round(
-                model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2
-            )
+            mcs_result[model] = round(model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2)
         else:
-            mcs_result[model] = "N/A"
+            mcs_result[model] = None
     mcs_result = pd.Series(mcs_result)
 
     # Combine all results into a single DataFrame
@@ -539,8 +568,25 @@ def get_leaderboard_data(vote_entry=None):
     leaderboard_data = leaderboard_data[
         ["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]
     ]
-    return leaderboard_data
 
+    # Save leaderboard data if this is a new vote
+    if vote_entry is not None:
+        try:
+            # Convert DataFrame to JSON and save
+            json_content = leaderboard_data.to_json(orient='records', indent=4).encode('utf-8')
+            file_like_object = io.BytesIO(json_content)
+            
+            upload_file(
+                path_or_fileobj=file_like_object,
+                path_in_repo=f"{year}.json",
+                repo_id="SWE-Arena/model_leaderboards",
+                repo_type="dataset",
+                use_auth_token=HfFolder.get_token()
+            )
+        except Exception as e:
+            print(f"Failed to save leaderboard cache: {e}")
+    
+    return leaderboard_data
 
 # Function to enable or disable submit buttons based on textbox content
 def toggle_submit_button(text):
@@ -567,7 +613,7 @@ with gr.Blocks() as app:
         )
         # Initialize the leaderboard with the DataFrame containing the expected columns
         leaderboard_component = Leaderboard(
-            value=get_leaderboard_data(),
+            value=get_leaderboard_data(use_cache=True),
             select_columns=[
                 "Rank",
                 "Model",
