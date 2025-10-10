@@ -74,7 +74,7 @@ Your interactions are anonymized and used solely for improving SWE-Arena and FM 
 - **Multi-Round Evaluation Metrics**: Develop specialized metrics for assessing model adaptation over successive turns
 - **Enhanced Community Engagement**: Enable broader participation through voting and contributions
 - **Expanded FM Coverage**: Include domain-specific and multimodal foundation models
-- **Advanced Context Compression**: Integrate techniques like LongRope and SelfExtend to manage long-term memory
+- **Advanced Context Compression**: Integrate techniques like [LongRope](https://github.com/microsoft/LongRoPE) and [SelfExtend](https://github.com/datamllab/LongLM) to manage long-term memory
 
 ## Contact
 
