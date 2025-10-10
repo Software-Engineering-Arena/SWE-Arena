@@ -328,7 +328,7 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
     )
 
 
-def load_content_from_hf(repo_name="SE-Arena/votes"):
+def load_content_from_hf(repo_name="SWE-Arena/model_votes"):
     """
     Read feedback content from a Hugging Face repository based on the current year.
 
@@ -389,7 +389,7 @@ def get_leaderboard_data(vote_entry=None):
         )
 
     # Load conversation data from the Hugging Face repository
-    conversation_data = load_content_from_hf("SE-Arena/conversations")
+    conversation_data = load_content_from_hf("SWE-Arena/model_conversations")
     conversation_df = pd.DataFrame(conversation_data)
 
     # Merge vote data with conversation data
@@ -1196,7 +1196,7 @@ with gr.Blocks() as app:
             file_name = now.strftime("%Y%m%d_%H%M%S")
 
             # Save feedback back to the Hugging Face dataset
-            save_content_to_hf(vote_entry, "SE-Arena/votes", folder_name, file_name)
+            save_content_to_hf(vote_entry, "SWE-Arena/model_votes", folder_name, file_name)
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
                 "right_chat"
@@ -1207,7 +1207,7 @@ with gr.Blocks() as app:
 
             # Save conversations back to the Hugging Face dataset
             save_content_to_hf(
-                conversation_state, "SE-Arena/conversations", folder_name, file_name
+                conversation_state, "SWE-Arena/model_conversations", folder_name, file_name
             )
 
             # Clear state
