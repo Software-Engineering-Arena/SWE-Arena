@@ -23,7 +23,7 @@ Welcome to **SWE-Arena**, an open-source platform designed for evaluating softwa
   - Traditional metrics: Elo score and average win rate
   - Network-based metrics: Eigenvector centrality, PageRank score
   - Community detection: Newman modularity score
-  - **Consistency score**: Quantify model determinism and reliability through self-play matches
+  - Consistency score: Quantify model determinism and reliability through self-play matches
 - **Transparent, Open-Source Leaderboard**: View real-time model rankings across diverse SE workflows with full transparency.
 
 ## Why SWE-Arena?
