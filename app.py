@@ -40,7 +40,9 @@ HINT_STRING = "Once signed in, your votes will be recorded securely."
 model_metadata = pd.read_json("model_metadata.jsonl", lines=True)
 
 # Create a dictionary mapping model names to their context lengths
-model_context_window = model_metadata.set_index("model_name")["context_window"].to_dict()
+model_context_window = model_metadata.set_index("model_name")[
+    "context_window"
+].to_dict()
 
 # Create a dictionary mapping model names to their links
 model_links = model_metadata.set_index("model_name")["link"].to_dict()
@@ -587,10 +589,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         ["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]
     ]
 
-    # Make model names clickable with their corresponding links
-    leaderboard_data["Model"] = leaderboard_data["Model"].apply(
-        lambda model_name: f'<a href="{model_links[model_name]}" target="_blank">{model_name}</a>'
-    )
+    # Note: Links are made clickable via JavaScript, keeping plain model names here
 
     # Save leaderboard data if this is a new vote
     if vote_entry is not None:
@@ -622,8 +621,52 @@ def toggle_submit_button(text):
         return gr.update(interactive=True)  # Enable the button
 
 
+# JavaScript to make model name links clickable in the leaderboard
+# Uses event delegation on the table container for better stability
+clickable_links_js = (
+    """
+function() {
+    const modelLinks = """
+    + json.dumps(model_links)
+    + """;
+
+    function makeLinksClickable() {
+        // Find all table cells in the Model column (2nd column)
+        const rows = document.querySelectorAll('table tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 2) {
+                const modelCell = cells[1]; // Model is the 2nd column
+                const cellText = modelCell.textContent.trim();
+
+                // Check if this cell contains a model name and hasn't been converted yet
+                if (modelLinks[cellText] && !modelCell.querySelector('a')) {
+                    // Create clickable link
+                    const link = document.createElement('a');
+                    link.href = modelLinks[cellText];
+                    link.textContent = cellText;
+                    link.target = '_blank';
+                    link.style.color = '#2563eb';
+                    link.style.textDecoration = 'underline';
+                    link.style.fontWeight = '500';
+
+                    // Replace text with link
+                    modelCell.innerHTML = '';
+                    modelCell.appendChild(link);
+                }
+            }
+        });
+    }
+
+    // Continuous polling approach - runs every 300ms
+    // This is the ONLY reliable way with virtual scrolling components
+    setInterval(makeLinksClickable, 300);
+}
+"""
+)
+
 # Gradio Interface
-with gr.Blocks() as app:
+with gr.Blocks(js=clickable_links_js) as app:
     user_authenticated = gr.State(False)
     models_state = gr.State({})
     conversation_state = gr.State({})
@@ -658,7 +701,18 @@ with gr.Blocks() as app:
                 "Newman Modularity Score",
                 "PageRank Score",
             ],
-            datatype=["number", "html", "number", "number", "number", "number", "number", "number", "number", "number"],
+            datatype=[
+                "number",
+                "str",
+                "number",
+                "number",
+                "number",
+                "number",
+                "number",
+                "number",
+                "number",
+                "number",
+            ],
         )
         # Add a citation block in Markdown
         citation_component = gr.Markdown(
