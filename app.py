@@ -36,12 +36,17 @@ TIMEOUT = 90
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
 HINT_STRING = "Once signed in, your votes will be recorded securely."
 
-# Load context length limits
-with open("context_window.json", "r") as file:
-    context_window = json.load(file)
+# Load model metadata
+model_metadata = pd.read_json("model_metadata.jsonl", lines=True)
 
-# Get list of available models
-available_models = list(context_window.keys())
+# Create a dictionary mapping model names to their context lengths
+model_context_window = model_metadata.set_index("model_name")["context_window"].to_dict()
+
+# Create a dictionary mapping model names to their links
+model_links = model_metadata.set_index("model_name")["link"].to_dict()
+
+# Get the list of available models
+available_models = model_metadata["model_name"].tolist()
 
 
 def fetch_github_content(url):
@@ -204,7 +209,7 @@ def truncate_prompt(model_alias, models, conversation_state):
     full_conversation = conversation_state[f"{model_alias}_chat"]
 
     # Get the context length for the model
-    context_length = context_window[models[model_alias]]
+    context_length = model_context_window[models[model_alias]]
 
     # Single loop to handle both FIFO removal and content truncation
     while len(json.dumps(full_conversation)) > context_length:
@@ -364,14 +369,14 @@ def load_content_from_hf(repo_name="SWE-Arena/model_votes"):
 
 def get_leaderboard_data(vote_entry=None, use_cache=True):
     year = str(datetime.now().year)
-    
+
     # Try to load cached leaderboard first
     if use_cache:
         try:
             cached_path = hf_hub_download(
                 repo_id="SWE-Arena/model_leaderboards",
                 filename=f"{year}.json",
-                repo_type="dataset"
+                repo_type="dataset",
             )
             with open(cached_path, "r") as f:
                 leaderboard_data = pd.read_json(f)
@@ -391,7 +396,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
                 return leaderboard_data
         except Exception as e:
             print(f"No cached leaderboard found for {year}, computing from votes...")
-    
+
     # Load feedback data from the Hugging Face repository
     vote_data = load_content_from_hf()
     vote_df = pd.DataFrame(vote_data)
@@ -511,14 +516,25 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
     )
 
     # Clean up potential inf/NaN values in the results
-    for result in [avr_result, bt_result, newman_result, eigen_result, elo_result, pagerank_result]:
-        result.scores = result.scores.replace([float('inf'), float('-inf')], float('nan'))
+    for result in [
+        avr_result,
+        bt_result,
+        newman_result,
+        eigen_result,
+        elo_result,
+        pagerank_result,
+    ]:
+        result.scores = result.scores.replace(
+            [float("inf"), float("-inf")], float("nan")
+        )
 
     # Calculate CEI results
     cei_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["cei_max"] > 0:
-            cei_result[model] = round(model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2)
+            cei_result[model] = round(
+                model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2
+            )
         else:
             cei_result[model] = None
     cei_result = pd.Series(cei_result)
@@ -527,7 +543,9 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
     mcs_result = {}
     for model in elo_result.scores.index:
         if model in model_stats and model_stats[model]["self_matches"] > 0:
-            mcs_result[model] = round(model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2)
+            mcs_result[model] = round(
+                model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2
+            )
         else:
             mcs_result[model] = None
     mcs_result = pd.Series(mcs_result)
@@ -569,24 +587,32 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         ["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]
     ]
 
+    # Make model names clickable with their corresponding links
+    leaderboard_data["Model"] = leaderboard_data["Model"].apply(
+        lambda model_name: f'<a href="{model_links[model_name]}" target="_blank">{model_name}</a>'
+    )
+
     # Save leaderboard data if this is a new vote
     if vote_entry is not None:
         try:
             # Convert DataFrame to JSON and save
-            json_content = leaderboard_data.to_json(orient='records', indent=4).encode('utf-8')
+            json_content = leaderboard_data.to_json(orient="records", indent=4).encode(
+                "utf-8"
+            )
             file_like_object = io.BytesIO(json_content)
-            
+
             upload_file(
                 path_or_fileobj=file_like_object,
                 path_in_repo=f"{year}.json",
                 repo_id="SWE-Arena/model_leaderboards",
                 repo_type="dataset",
-                use_auth_token=HfFolder.get_token()
+                use_auth_token=HfFolder.get_token(),
             )
         except Exception as e:
             print(f"Failed to save leaderboard cache: {e}")
-    
+
     return leaderboard_data
+
 
 # Function to enable or disable submit buttons based on textbox content
 def toggle_submit_button(text):
@@ -632,6 +658,7 @@ with gr.Blocks() as app:
                 "Newman Modularity Score",
                 "PageRank Score",
             ],
+            datatype=["number", "html", "number", "number", "number", "number", "number", "number", "number", "number"],
         )
         # Add a citation block in Markdown
         citation_component = gr.Markdown(
@@ -1242,7 +1269,9 @@ with gr.Blocks() as app:
             file_name = now.strftime("%Y%m%d_%H%M%S")
 
             # Save feedback back to the Hugging Face dataset
-            save_content_to_hf(vote_entry, "SWE-Arena/model_votes", folder_name, file_name)
+            save_content_to_hf(
+                vote_entry, "SWE-Arena/model_votes", folder_name, file_name
+            )
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
                 "right_chat"
@@ -1253,7 +1282,10 @@ with gr.Blocks() as app:
 
             # Save conversations back to the Hugging Face dataset
             save_content_to_hf(
-                conversation_state, "SWE-Arena/model_conversations", folder_name, file_name
+                conversation_state,
+                "SWE-Arena/model_conversations",
+                folder_name,
+                file_name,
             )
 
             # Clear state
