@@ -1,3 +1,4 @@
+datasets
 evalica
 gradio[oauth]
 gradio_leaderboard
