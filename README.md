@@ -8,7 +8,7 @@ sdk_version: 5.49.1
 app_file: app.py
 hf_oauth: true
 pinned: false
-short_description: The chatbot arena for software engineering
+short_description: Chatbot arena for software engineering tasks
 ---
 
 # SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering
