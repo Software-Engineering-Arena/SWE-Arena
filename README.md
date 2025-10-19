@@ -1,6 +1,6 @@
 ---
 title: SWE-Arena
-emoji: 🛠️
+emoji: 🎯
 colorFrom: blue
 colorTo: purple
 sdk: gradio
