@@ -676,7 +676,7 @@ with gr.Blocks(js=clickable_links_js) as app:
         leaderboard_intro = gr.Markdown(
             """
             # 🏆 FM4SE Leaderboard: Community-Driven Evaluation of Top Foundation Models (FMs) in Software Engineering (SE) Tasks
-            The SWE-Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. This platform aims to empower the SE community to assess and compare the performance of leading FMs in related tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
+            The SWE-Model-Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. This platform aims to empower the SE community to assess and compare the performance of leading FMs in related tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
             """,
             elem_classes="leaderboard-intro",
         )
@@ -717,7 +717,7 @@ with gr.Blocks(js=clickable_links_js) as app:
         # Add a citation block in Markdown
         citation_component = gr.Markdown(
             """
-            Made with ❤️ for SWE-Arena. If this work is useful to you, please consider citing:
+            Made with ❤️ for SWE-Model-Arena. If this work is useful to you, please consider citing:
             ```
             @inproceedings{zhao2025se,
             title={SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering},
@@ -731,7 +731,7 @@ with gr.Blocks(js=clickable_links_js) as app:
         # Add title and description as a Markdown component
         arena_intro = gr.Markdown(
             f"""
-            # ⚔️ SWE-Arena: Explore and Test Top FMs with SE Tasks by Community Voting
+            # ⚔️ SWE-Model-Arena: Explore and Test Top FMs with SE Tasks by Community Voting
 
             ## 📜How It Works
             - **Blind Comparison**: Submit a SE-related query to two anonymous FMs randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.

@@ -1,5 +1,5 @@
 ---
-title: SWE-Arena
+title: SWE-Model-Arena
 emoji: 🎯
 colorFrom: blue
 colorTo: purple
@@ -11,9 +11,9 @@ pinned: false
 short_description: Chatbot arena for software engineering tasks
 ---
 
-# SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering
+# SWE-Model-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering
 
-Welcome to **SWE-Arena**, an open-source platform designed for evaluating software engineering-focused foundation models (FMs), particularly large language models (LLMs). SWE-Arena benchmarks models in iterative, context-rich workflows that are characteristic of software engineering (SE) tasks.
+Welcome to **SWE-Model-Arena**, an open-source platform designed for evaluating software engineering-focused foundation models (FMs), particularly large language models (LLMs). SWE-Model-Arena benchmarks models in iterative, context-rich workflows that are characteristic of software engineering (SE) tasks.
 
 ## Key Features
 
@@ -26,9 +26,9 @@ Welcome to **SWE-Arena**, an open-source platform designed for evaluating softwa
   - Consistency score: Quantify model determinism and reliability through self-play matches
 - **Transparent, Open-Source Leaderboard**: View real-time model rankings across diverse SE workflows with full transparency.
 
-## Why SWE-Arena?
+## Why SWE-Model-Arena?
 
-Existing evaluation frameworks (e.g. [LMArena](https://lmarena.ai)) often don't address the complex, iterative nature of SE tasks. SWE-Arena fills critical gaps by:
+Existing evaluation frameworks (e.g. [LMArena](https://lmarena.ai)) often don't address the complex, iterative nature of SE tasks. SWE-Model-Arena fills critical gaps by:
 
 - Supporting context-rich, multi-turn evaluations to capture iterative workflows
 - Integrating repository-level context through RepoChat to simulate real-world development scenarios
@@ -51,7 +51,7 @@ Existing evaluation frameworks (e.g. [LMArena](https://lmarena.ai)) often don't 
 
 ### Usage
 
-1. Navigate to the [SWE-Arena platform](https://huggingface.co/spaces/SE-Arena/Software-Engineering-Arena)
+1. Navigate to the [SWE-Model-Arena platform](https://huggingface.co/spaces/SE-Arena/SWE-Model-Arena)
 2. Sign in with your Hugging Face account
 3. Enter your SE task prompt (optionally include a repository URL for RepoChat)
 4. Engage in multi-round interactions and vote on model performance
@@ -66,7 +66,7 @@ We welcome contributions from the community! Here's how you can help:
 
 ## Privacy Policy
 
-Your interactions are anonymized and used solely for improving SWE-Arena and FM benchmarking. By using SWE-Arena, you agree to our Terms of Service.
+Your interactions are anonymized and used solely for improving SWE-Model-Arena and FM benchmarking. By using SWE-Model-Arena, you agree to our Terms of Service.
 
 ## Future Plans
 
@@ -78,4 +78,4 @@ Your interactions are anonymized and used solely for improving SWE-Arena and FM 
 
 ## Contact
 
-For inquiries or feedback, please [open an issue](https://github.com/SE-Arena/Software-Engineering-Arena/issues/new) in this repository. We welcome your contributions and suggestions!
+For inquiries or feedback, please [open an issue](https://github.com/SE-Arena/SWE-Model-Arena/issues/new) in this repository. We welcome your contributions and suggestions!
