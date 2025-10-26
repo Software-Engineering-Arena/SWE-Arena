@@ -79,3 +79,19 @@ Your interactions are anonymized and used solely for improving SWE-Model-Arena a
 ## Contact
 
 For inquiries or feedback, please [open an issue](https://github.com/SE-Arena/SWE-Model-Arena/issues/new) in this repository. We welcome your contributions and suggestions!
+
+## Citation
+
+Made with ❤️ for SWE-Model-Arena. If this work is useful to you, please consider citing our vision paper:
+
+```bibtex
+@misc{zhao2025se,
+      title={SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering}, 
+      author={Zhimin Zhao},
+      year={2025},
+      eprint={2502.01860},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE},
+      url={https://arxiv.org/abs/2502.01860}, 
+}
+```
