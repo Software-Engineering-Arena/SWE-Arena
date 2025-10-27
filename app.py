@@ -720,10 +720,13 @@ with gr.Blocks(js=clickable_links_js) as app:
             Made with ❤️ for SWE-Model-Arena. If this work is useful to you, please consider citing our vision paper:
             ```
             @inproceedings{zhao2025se,
-            title={SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering},
+            title={SE Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering},
             author={Zhao, Zhimin},
-            booktitle={ACM international conference on AI Foundation Models and Software Engineering},
-            year={2025}}
+            booktitle={2025 IEEE/ACM Second International Conference on AI Foundation Models and Software Engineering (Forge)},
+            pages={78--81},
+            year={2025},
+            organization={IEEE}
+            }
             ```
             """
         )
