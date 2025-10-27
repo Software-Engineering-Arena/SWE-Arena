@@ -719,15 +719,11 @@ with gr.Blocks(js=clickable_links_js) as app:
             """
             Made with ❤️ for SWE-Model-Arena. If this work is useful to you, please consider citing our vision paper:
             ```
-            @misc{zhao2025se,
-                title={SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering}, 
-                author={Zhimin Zhao},
-                year={2025},
-                eprint={2502.01860},
-                archivePrefix={arXiv},
-                primaryClass={cs.SE},
-                url={https://arxiv.org/abs/2502.01860}, 
-            }
+            @inproceedings{zhao2025se,
+            title={SWE-Arena: An Interactive Platform for Evaluating Foundation Models in Software Engineering},
+            author={Zhao, Zhimin},
+            booktitle={ACM international conference on AI Foundation Models and Software Engineering},
+            year={2025}}
             ```
             """
         )
