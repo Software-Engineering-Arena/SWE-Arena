@@ -7,6 +7,8 @@
 {"model_name": "claude-opus-4-20250514", "context_window": 200000, "link": "https://www.anthropic.com/news/claude-4"}
 {"model_name": "claude-sonnet-4-20250514", "context_window": 200000, "link": "https://www.anthropic.com/claude/sonnet"}
 {"model_name": "claude-opus-4-1-20250805", "context_window": 200000, "link": "https://www.anthropic.com/news/claude-opus-4-1"}
+{"model_name": "claude-sonnet-4-5-20250929", "context_window": 200000, "link": "https://www.anthropic.com/news/claude-sonnet-4-5"}
+{"model_name": "claude-haiku-4-5-20251001", "context_window": 200000, "link": "https://www.anthropic.com/news/claude-haiku-4-5"}
 {"model_name": "doubao-1-5-pro-256k-250115", "context_window": 256000, "link": "https://seed.bytedance.com"}
 {"model_name": "doubao-1-5-thinking-pro-250415", "context_window": 256000, "link": "https://seed.bytedance.com"}
 {"model_name": "doubao-seed-1-6-250615", "context_window": 256000, "link": "https://seed.bytedance.com"}
