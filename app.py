@@ -669,9 +669,24 @@ function() {
 # Function to check initial authentication status
 def check_auth_on_load(request: gr.Request):
     """Check if user is already authenticated when page loads."""
-    if hasattr(request, 'username') and request.username:
-        # User is already logged in
-        token = HfApi().token
+    print(f"DEBUG: Checking auth on load")
+    print(f"DEBUG: Has username attr: {hasattr(request, 'username')}")
+    if hasattr(request, 'username'):
+        print(f"DEBUG: Username: {request.username}")
+
+    # Try to get token from environment (for Spaces) or HfApi (for local)
+    token = os.getenv("HF_TOKEN") or HfApi().token
+
+    # Check if user is authenticated via OAuth
+    is_authenticated = (hasattr(request, 'username') and request.username is not None and request.username != "")
+
+    print(f"DEBUG: Is authenticated: {is_authenticated}")
+    print(f"DEBUG: Token available: {token is not None}")
+
+    if is_authenticated or token:
+        # User is logged in OR we have a token available
+        username = request.username if hasattr(request, 'username') else "local_user"
+        print(f"DEBUG: Enabling interface for user: {username}")
         return (
             gr.update(interactive=True),  # repo_url
             gr.update(interactive=True),  # shared_input
@@ -679,11 +694,13 @@ def check_auth_on_load(request: gr.Request):
             gr.update(interactive=True),  # feedback
             gr.update(interactive=True),  # submit_feedback_btn
             gr.update(visible=False),  # hint_markdown
-            gr.update(visible=False),  # login_button (hide if already logged in)
+            gr.update(visible=False if is_authenticated else True),  # login_button
+            gr.update(visible=False),  # refresh_auth_button (hide when authenticated)
             token,  # oauth_token
         )
     else:
-        # User not logged in - keep defaults
+        # User not logged in
+        print(f"DEBUG: User not authenticated, keeping interface disabled")
         return (
             gr.update(interactive=False),  # repo_url
             gr.update(interactive=False),  # shared_input
@@ -692,6 +709,7 @@ def check_auth_on_load(request: gr.Request):
             gr.update(interactive=False),  # submit_feedback_btn
             gr.update(visible=True),  # hint_markdown
             gr.update(visible=True),  # login_button
+            gr.update(visible=True),  # refresh_auth_button (show when not authenticated)
             None,  # oauth_token
         )
 
@@ -786,9 +804,16 @@ with gr.Blocks(js=clickable_links_js) as app:
             if SHOW_HINT_STRING:
                 markdown_text += f"\n{HINT_STRING}"
             hint_markdown = gr.Markdown(markdown_text, elem_classes="markdown-text")
-            login_button = gr.LoginButton(
-                "Sign in with Hugging Face", elem_id="oauth-button"
-            )
+            with gr.Column():
+                login_button = gr.LoginButton(
+                    "Sign in with Hugging Face", elem_id="oauth-button"
+                )
+                refresh_auth_button = gr.Button(
+                    "Refresh Login Status",
+                    variant="secondary",
+                    size="sm",
+                    visible=True
+                )
 
         guardrail_message = gr.Markdown("", visible=False, elem_id="guardrail-message")
 
@@ -1130,22 +1155,29 @@ with gr.Blocks(js=clickable_links_js) as app:
         def hide_thanks_message():
             return gr.update(visible=False)
 
-        # Function to handle login - uses gr.Request to get OAuth info
+        # Function to handle login/refresh - uses gr.Request to get OAuth info
         def handle_login(request: gr.Request):
             """
             Handle user login using Hugging Face OAuth.
             When deployed on HF Spaces with OAuth, request contains user info.
+            This is also used by the refresh button to re-check auth status.
             """
+            print(f"DEBUG: handle_login called")
+            print(f"DEBUG: Has username: {hasattr(request, 'username')}")
+            if hasattr(request, 'username'):
+                print(f"DEBUG: Username in handle_login: {request.username}")
+
+            # Try to get token from environment (for Spaces) or HfApi (for local)
+            token = os.getenv("HF_TOKEN") or HfApi().token
+
             # Check if user is authenticated through HF Spaces OAuth
-            if hasattr(request, 'username') and request.username:
-                # User is logged in via HF Spaces OAuth
-                # Get the OAuth token from the request headers if available
-                token = request.headers.get('authorization', '').replace('Bearer ', '') if hasattr(request, 'headers') else None
+            is_authenticated = hasattr(request, 'username') and request.username
 
-                # If no token in headers, try to get it from HfApi (in case user logged in via CLI)
-                if not token:
-                    token = HfApi().token
+            print(f"DEBUG: Is authenticated in handle_login: {is_authenticated}")
+            print(f"DEBUG: Token available in handle_login: {token is not None}")
 
+            if is_authenticated or token:
+                # User is logged in
                 return (
                     gr.update(interactive=True),  # repo_url -> Enable
                     gr.update(interactive=True),  # Enable shared_input
@@ -1153,6 +1185,7 @@ with gr.Blocks(js=clickable_links_js) as app:
                     gr.update(interactive=True),  # Enable feedback radio buttons
                     gr.update(interactive=True),  # Enable submit_feedback_btn
                     gr.update(visible=False),  # Hide the hint string
+                    gr.update(visible=False),  # Hide refresh button when authenticated
                     token,  # Store the oauth token
                 )
             else:
@@ -1163,23 +1196,27 @@ with gr.Blocks(js=clickable_links_js) as app:
                     gr.update(interactive=False),  # Keep send_first disabled
                     gr.update(interactive=False),  # Keep feedback radio buttons disabled
                     gr.update(interactive=False),  # Keep submit_feedback_btn disabled
-                    gr.update(visible=True, value="## Please sign in with Hugging Face!\nClick the button above to authenticate. You must be logged into HuggingFace.co for this to work."),  # Show instructions
+                    gr.update(visible=True, value="## Please sign in with Hugging Face!\nClick the 'Sign in with Hugging Face' button above, then click 'Refresh Login Status' after you return from the auth page."),  # Show instructions
+                    gr.update(visible=True),  # Show refresh button
                     None,  # Clear oauth_token
                 )
 
-        # Handle the login button click
-        login_button.click(
-            handle_login,
-            outputs=[
-                repo_url,  # Keep this in sync with shared_input
-                shared_input,  # Enable shared_input
-                send_first,  # Enable send_first button
-                feedback,  # Enable feedback radio buttons
-                submit_feedback_btn,  # Enable submit_feedback_btn
-                hint_markdown,  # Hide the hint string
-                oauth_token,  # Store the OAuth token
-            ],
-        )
+        # Handle the login button click and refresh button click
+        # Both use the same handler to check auth status
+        for button in [login_button, refresh_auth_button]:
+            button.click(
+                handle_login,
+                outputs=[
+                    repo_url,  # Keep this in sync with shared_input
+                    shared_input,  # Enable shared_input
+                    send_first,  # Enable send_first button
+                    feedback,  # Enable feedback radio buttons
+                    submit_feedback_btn,  # Enable submit_feedback_btn
+                    hint_markdown,  # Hide the hint string
+                    refresh_auth_button,  # Control refresh button visibility
+                    oauth_token,  # Store the OAuth token
+                ],
+            )
 
         # First round handling
         send_first.click(
@@ -1460,6 +1497,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             submit_feedback_btn,
             hint_markdown,
             login_button,
+            refresh_auth_button,
             oauth_token,
         ],
     )
