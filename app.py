@@ -666,6 +666,36 @@ function() {
 """
 )
 
+# Function to check initial authentication status
+def check_auth_on_load(request: gr.Request):
+    """Check if user is already authenticated when page loads."""
+    if hasattr(request, 'username') and request.username:
+        # User is already logged in
+        token = HfApi().token
+        return (
+            gr.update(interactive=True),  # repo_url
+            gr.update(interactive=True),  # shared_input
+            gr.update(interactive=False),  # send_first (disabled until text entered)
+            gr.update(interactive=True),  # feedback
+            gr.update(interactive=True),  # submit_feedback_btn
+            gr.update(visible=False),  # hint_markdown
+            gr.update(visible=False),  # login_button (hide if already logged in)
+            token,  # oauth_token
+        )
+    else:
+        # User not logged in - keep defaults
+        return (
+            gr.update(interactive=False),  # repo_url
+            gr.update(interactive=False),  # shared_input
+            gr.update(interactive=False),  # send_first
+            gr.update(interactive=False),  # feedback
+            gr.update(interactive=False),  # submit_feedback_btn
+            gr.update(visible=True),  # hint_markdown
+            gr.update(visible=True),  # login_button
+            None,  # oauth_token
+        )
+
+
 # Gradio Interface
 with gr.Blocks(js=clickable_links_js) as app:
     user_authenticated = gr.State(False)
@@ -1100,58 +1130,45 @@ with gr.Blocks(js=clickable_links_js) as app:
         def hide_thanks_message():
             return gr.update(visible=False)
 
-        # Function to handle login
-        def handle_login(profile: gr.OAuthProfile | None):
+        # Function to handle login - uses gr.Request to get OAuth info
+        def handle_login(request: gr.Request):
             """
             Handle user login using Hugging Face OAuth.
-            The LoginButton automatically provides the profile when user logs in.
+            When deployed on HF Spaces with OAuth, request contains user info.
             """
-            if profile is None:
-                # User is not logged in
-                return (
-                    gr.update(interactive=False),  # repo_url -> disable if not logged in
-                    gr.update(interactive=False),  # Keep shared_input disabled
-                    gr.update(interactive=False),  # Keep send_first disabled
-                    gr.update(interactive=False),  # Keep feedback radio buttons disabled
-                    gr.update(interactive=False),  # Keep submit_feedback_btn disabled
-                    gr.update(visible=True),  # Show the hint string
-                    None,  # Clear oauth_token
-                )
+            # Check if user is authenticated through HF Spaces OAuth
+            if hasattr(request, 'username') and request.username:
+                # User is logged in via HF Spaces OAuth
+                # Get the OAuth token from the request headers if available
+                token = request.headers.get('authorization', '').replace('Bearer ', '') if hasattr(request, 'headers') else None
 
-            # User is logged in - profile contains oauth_info with access token
-            try:
-                # Store the OAuth token for later use
-                token = profile.oauth_info.get("access_token") if profile.oauth_info else None
+                # If no token in headers, try to get it from HfApi (in case user logged in via CLI)
+                if not token:
+                    token = HfApi().token
 
-                # If token is successfully retrieved, update the interface state
                 return (
-                    gr.update(interactive=True),  # repo_url -> Enable in sync
+                    gr.update(interactive=True),  # repo_url -> Enable
                     gr.update(interactive=True),  # Enable shared_input
-                    gr.update(
-                        interactive=False
-                    ),  # Keep send_first button disabled initially
+                    gr.update(interactive=False),  # Keep send_first disabled initially
                     gr.update(interactive=True),  # Enable feedback radio buttons
                     gr.update(interactive=True),  # Enable submit_feedback_btn
                     gr.update(visible=False),  # Hide the hint string
                     token,  # Store the oauth token
                 )
-            except Exception as e:
-                # Handle login failure
-                print(f"Login processing failed: {e}")
+            else:
+                # User is not logged in - instruct them to use HF login
                 return (
-                    gr.update(interactive=False),  # repo_url -> disable if login failed
+                    gr.update(interactive=False),  # repo_url -> disable
                     gr.update(interactive=False),  # Keep shared_input disabled
                     gr.update(interactive=False),  # Keep send_first disabled
-                    gr.update(
-                        interactive=False
-                    ),  # Keep feedback radio buttons disabled
+                    gr.update(interactive=False),  # Keep feedback radio buttons disabled
                     gr.update(interactive=False),  # Keep submit_feedback_btn disabled
-                    gr.update(visible=True),  # Show the hint string
+                    gr.update(visible=True, value="## Please sign in with Hugging Face!\nClick the button above to authenticate. You must be logged into HuggingFace.co for this to work."),  # Show instructions
                     None,  # Clear oauth_token
                 )
 
-        # Handle the login button - LoginButton automatically passes profile
-        login_button.login(
+        # Handle the login button click
+        login_button.click(
             handle_login,
             outputs=[
                 repo_url,  # Keep this in sync with shared_input
@@ -1424,12 +1441,27 @@ with gr.Blocks(js=clickable_links_js) as app:
             ## Terms of Service
 
             Users are required to agree to the following terms before using the service:
-            
+
             - The service is a **research preview**. It only provides limited safety measures and may generate offensive content.
             - It must not be used for any **illegal, harmful, violent, racist, or sexual** purposes.
             - Please do not upload any **private** information.
             - The service collects user dialogue data, including both text and images, and reserves the right to distribute it under a **Creative Commons Attribution (CC-BY)** or a similar license.
             """
         )
+
+    # Check authentication status when the app loads
+    app.load(
+        check_auth_on_load,
+        outputs=[
+            repo_url,
+            shared_input,
+            send_first,
+            feedback,
+            submit_feedback_btn,
+            hint_markdown,
+            login_button,
+            oauth_token,
+        ],
+    )
 
     app.launch()
