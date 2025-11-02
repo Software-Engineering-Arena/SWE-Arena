@@ -18,7 +18,7 @@ import pandas as pd
 from datetime import datetime
 from github import Github
 from gradio_leaderboard import Leaderboard
-from huggingface_hub import upload_file, hf_hub_download, HfFolder, HfApi
+from huggingface_hub import upload_file, hf_hub_download, HfApi
 from openai import OpenAI
 
 # Load environment variables
@@ -321,7 +321,7 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
     filename = f"{folder_name}/{file_name}.json"
 
     # Ensure the user is authenticated with HF
-    token = HfFolder.get_token()
+    token = HfApi().token
     if token is None:
         raise ValueError("Please log in to Hugging Face using `huggingface-cli login`.")
 
@@ -331,7 +331,7 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
         path_in_repo=filename,
         repo_id=repo_name,
         repo_type="dataset",
-        use_auth_token=token,
+        token=token,
     )
 
 
@@ -605,7 +605,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
                 path_in_repo=f"{year}.json",
                 repo_id="SWE-Arena/model_leaderboards",
                 repo_type="dataset",
-                use_auth_token=HfFolder.get_token(),
+                token=HfApi().token,
             )
         except Exception as e:
             print(f"Failed to save leaderboard cache: {e}")
@@ -1104,7 +1104,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             try:
                 # Use Hugging Face OAuth to initiate login
                 HfApi()
-                token = HfFolder.get_token()
+                token = HfApi().token
                 if not token:
                     raise Exception("Authentication token not found.")
 
