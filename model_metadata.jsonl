@@ -37,7 +37,6 @@
 {"model_name": "grok-3-beta", "context_window": 1000000, "link": "https://x.ai/news/grok-3"}
 {"model_name": "grok-3-mini-fast-beta", "context_window": 1000000, "link": "https://x.ai/news/grok-3"}
 {"model_name": "grok-3-mini-beta", "context_window": 1000000, "link": "https://x.ai/news/grok-3"}
-{"model_name": "llama-3.1-405b", "context_window": 128000, "link": "https://ai.meta.com/blog/meta-llama-3-1"}
 {"model_name": "llama-3.3-70b", "context_window": 128000, "link": "https://www.llama.com"}
 {"model_name": "llama4-scout-instruct-basic", "context_window": 10000000, "link": "https://www.llama.com/models/llama-4"}
 {"model_name": "llama4-maverick-instruct-basic", "context_window": 10000000, "link": "https://www.llama.com/models/llama-4"}
