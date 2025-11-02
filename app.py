@@ -307,7 +307,7 @@ def format_conversation_history(conversation_history):
     return formatted_text
 
 
-def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
+def save_content_to_hf(vote_data, repo_name, folder_name, file_name, token=None):
     """
     Save feedback content to Hugging Face repository.
     """
@@ -321,9 +321,10 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name):
     filename = f"{folder_name}/{file_name}.json"
 
     # Ensure the user is authenticated with HF
-    token = HfApi().token
     if token is None:
-        raise ValueError("Please log in to Hugging Face using `huggingface-cli login`.")
+        token = HfApi().token
+    if token is None:
+        raise ValueError("Please log in to Hugging Face to submit votes.")
 
     # Upload to Hugging Face repository
     upload_file(
@@ -671,6 +672,9 @@ with gr.Blocks(js=clickable_links_js) as app:
     models_state = gr.State({})
     conversation_state = gr.State({})
 
+    # Add OAuth information state to track user
+    oauth_token = gr.State(None)
+
     with gr.Tab("🏆Leaderboard"):
         # Add title and description as a Markdown component
         leaderboard_intro = gr.Markdown(
@@ -752,7 +756,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             if SHOW_HINT_STRING:
                 markdown_text += f"\n{HINT_STRING}"
             hint_markdown = gr.Markdown(markdown_text, elem_classes="markdown-text")
-            login_button = gr.Button(
+            login_button = gr.LoginButton(
                 "Sign in with Hugging Face", elem_id="oauth-button"
             )
 
@@ -1097,20 +1101,30 @@ with gr.Blocks(js=clickable_links_js) as app:
             return gr.update(visible=False)
 
         # Function to handle login
-        def handle_login():
+        def handle_login(profile: gr.OAuthProfile | None):
             """
-            Handle user login using Hugging Face OAuth with automatic redirection.
+            Handle user login using Hugging Face OAuth.
+            The LoginButton automatically provides the profile when user logs in.
             """
+            if profile is None:
+                # User is not logged in
+                return (
+                    gr.update(interactive=False),  # repo_url -> disable if not logged in
+                    gr.update(interactive=False),  # Keep shared_input disabled
+                    gr.update(interactive=False),  # Keep send_first disabled
+                    gr.update(interactive=False),  # Keep feedback radio buttons disabled
+                    gr.update(interactive=False),  # Keep submit_feedback_btn disabled
+                    gr.update(visible=True),  # Show the hint string
+                    None,  # Clear oauth_token
+                )
+
+            # User is logged in - profile contains oauth_info with access token
             try:
-                # Use Hugging Face OAuth to initiate login
-                HfApi()
-                token = HfApi().token
-                if not token:
-                    raise Exception("Authentication token not found.")
+                # Store the OAuth token for later use
+                token = profile.oauth_info.get("access_token") if profile.oauth_info else None
 
                 # If token is successfully retrieved, update the interface state
                 return (
-                    gr.update(visible=False),  # Hide the login button
                     gr.update(interactive=True),  # repo_url -> Enable in sync
                     gr.update(interactive=True),  # Enable shared_input
                     gr.update(
@@ -1119,12 +1133,12 @@ with gr.Blocks(js=clickable_links_js) as app:
                     gr.update(interactive=True),  # Enable feedback radio buttons
                     gr.update(interactive=True),  # Enable submit_feedback_btn
                     gr.update(visible=False),  # Hide the hint string
+                    token,  # Store the oauth token
                 )
             except Exception as e:
                 # Handle login failure
-                print(f"Login failed: {e}")
+                print(f"Login processing failed: {e}")
                 return (
-                    gr.update(visible=True),  # Keep the login button visible
                     gr.update(interactive=False),  # repo_url -> disable if login failed
                     gr.update(interactive=False),  # Keep shared_input disabled
                     gr.update(interactive=False),  # Keep send_first disabled
@@ -1133,20 +1147,20 @@ with gr.Blocks(js=clickable_links_js) as app:
                     ),  # Keep feedback radio buttons disabled
                     gr.update(interactive=False),  # Keep submit_feedback_btn disabled
                     gr.update(visible=True),  # Show the hint string
+                    None,  # Clear oauth_token
                 )
 
-        # Handle the login button click
-        login_button.click(
+        # Handle the login button - LoginButton automatically passes profile
+        login_button.login(
             handle_login,
-            inputs=[],
             outputs=[
-                login_button,  # Hide the login button after successful login
                 repo_url,  # Keep this in sync with shared_input
                 shared_input,  # Enable shared_input
                 send_first,  # Enable send_first button
                 feedback,  # Enable feedback radio buttons
                 submit_feedback_btn,  # Enable submit_feedback_btn
                 hint_markdown,  # Hide the hint string
+                oauth_token,  # Store the OAuth token
             ],
         )
 
@@ -1301,7 +1315,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             ],
         )
 
-        def submit_feedback(vote, models_state, conversation_state):
+        def submit_feedback(vote, models_state, conversation_state, token):
             # Map vote to actual model names
             match vote:
                 case "Model A":
@@ -1327,7 +1341,7 @@ with gr.Blocks(js=clickable_links_js) as app:
 
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(
-                vote_entry, "SWE-Arena/model_votes", folder_name, file_name
+                vote_entry, "SWE-Arena/model_votes", folder_name, file_name, token
             )
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
@@ -1343,6 +1357,7 @@ with gr.Blocks(js=clickable_links_js) as app:
                 "SWE-Arena/model_conversations",
                 folder_name,
                 file_name,
+                token,
             )
 
             # Clear state
@@ -1385,7 +1400,7 @@ with gr.Blocks(js=clickable_links_js) as app:
         # Update the click event for the submit feedback button
         submit_feedback_btn.click(
             submit_feedback,
-            inputs=[feedback, models_state, conversation_state],
+            inputs=[feedback, models_state, conversation_state, oauth_token],
             outputs=[
                 shared_input,  # Reset shared_input
                 repo_url,  # Show the repo-related URL message
