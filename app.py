@@ -925,7 +925,7 @@ with gr.Blocks(js=clickable_links_js) as app:
 
         def guardrail_check_se_relevance(user_input):
             """
-            Use gpt-oss-20b to check if the user input is SE-related.
+            Use gpt-oss-safeguard-20b to check if the user input is SE-related.
             Return True if it is SE-related, otherwise False.
             """
             # Example instructions for classification — adjust to your needs
@@ -942,7 +942,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             try:
                 # Make the chat completion call
                 response = openai_client.chat.completions.create(
-                    model="gpt-oss-20b", messages=[system_message, user_message]
+                    model="gpt-oss-safeguard-20b", messages=[system_message, user_message]
                 )
                 classification = response.choices[0].message.content.strip().lower()
                 # Check if the LLM responded with 'Yes'
