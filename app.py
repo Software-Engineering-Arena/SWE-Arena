@@ -694,7 +694,7 @@ def check_auth_on_load(request: gr.Request):
             gr.update(interactive=True),  # feedback
             gr.update(interactive=True),  # submit_feedback_btn
             gr.update(visible=False),  # hint_markdown
-            gr.update(visible=False if is_authenticated else True),  # login_button
+            gr.update(visible=True),  # login_button (keep visible for logout)
             gr.update(visible=False),  # refresh_auth_button (hide when authenticated)
             token,  # oauth_token
         )
@@ -1185,6 +1185,7 @@ with gr.Blocks(js=clickable_links_js) as app:
                     gr.update(interactive=True),  # Enable feedback radio buttons
                     gr.update(interactive=True),  # Enable submit_feedback_btn
                     gr.update(visible=False),  # Hide the hint string
+                    gr.update(visible=True),  # Keep login button visible for logout
                     gr.update(visible=False),  # Hide refresh button when authenticated
                     token,  # Store the oauth token
                 )
@@ -1197,6 +1198,7 @@ with gr.Blocks(js=clickable_links_js) as app:
                     gr.update(interactive=False),  # Keep feedback radio buttons disabled
                     gr.update(interactive=False),  # Keep submit_feedback_btn disabled
                     gr.update(visible=True, value="## Please sign in with Hugging Face!\nClick the 'Sign in with Hugging Face' button above, then click 'Refresh Login Status' after you return from the auth page."),  # Show instructions
+                    gr.update(visible=True),  # Keep login button visible
                     gr.update(visible=True),  # Show refresh button
                     None,  # Clear oauth_token
                 )
@@ -1213,6 +1215,7 @@ with gr.Blocks(js=clickable_links_js) as app:
                     feedback,  # Enable feedback radio buttons
                     submit_feedback_btn,  # Enable submit_feedback_btn
                     hint_markdown,  # Hide the hint string
+                    login_button,  # Control login button visibility
                     refresh_auth_button,  # Control refresh button visibility
                     oauth_token,  # Store the OAuth token
                 ],
