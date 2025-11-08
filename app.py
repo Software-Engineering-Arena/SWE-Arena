@@ -377,8 +377,8 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
     if use_cache:
         try:
             cached_path = hf_hub_download(
-                repo_id="SWE-Arena/model_leaderboards",
-                filename=f"{year}.json",
+                repo_id="SWE-Arena/swe_leaderboards",
+                filename="swe-model-arena.json",
                 repo_type="dataset",
             )
             with open(cached_path, "r") as f:
@@ -603,8 +603,8 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
 
             upload_file(
                 path_or_fileobj=file_like_object,
-                path_in_repo=f"{year}.json",
-                repo_id="SWE-Arena/model_leaderboards",
+                path_in_repo="swe-model-arena.json",
+                repo_id="SWE-Arena/swe_leaderboards",
                 repo_type="dataset",
                 token=HfApi().token,
             )
