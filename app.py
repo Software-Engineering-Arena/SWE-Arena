@@ -32,6 +32,9 @@ openai_client = OpenAI(api_key=api_key, base_url=base_url)
 # Timeout in seconds for model responses
 TIMEOUT = 90
 
+# Leaderboard update time frame in days
+LEADERBOARD_UPDATE_TIME_FRAME_DAYS = 365
+
 # Hint string constant
 SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
 HINT_STRING = "Once signed in, your votes will be recorded securely."
@@ -307,7 +310,7 @@ def format_conversation_history(conversation_history):
     return formatted_text
 
 
-def save_content_to_hf(vote_data, repo_name, folder_name, file_name, token=None):
+def save_content_to_hf(vote_data, repo_name, file_name, token=None):
     """
     Save feedback content to Hugging Face repository.
     """
@@ -318,7 +321,7 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name, token=None)
     file_like_object = io.BytesIO(json_content)
 
     # Define the path in the repository
-    filename = f"{folder_name}/{file_name}.json"
+    filename = f"{file_name}.json"
 
     # Ensure the user is authenticated with HF
     if token is None:
@@ -336,9 +339,20 @@ def save_content_to_hf(vote_data, repo_name, folder_name, file_name, token=None)
     )
 
 
-def load_content_from_hf(repo_name="SWE-Arena/model_votes"):
+def is_file_within_time_frame(file_path, days):
+    try:
+        # Extract timestamp from filename
+        timestamp_str = file_path.split("/")[-1].split(".")[0]
+        file_datetime = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+        time_diff = datetime.now() - file_datetime
+        return time_diff.days <= days
+    except:
+        return False
+
+
+def load_content_from_hf(repo_name="SWE-Arena/vote_metadata"):
     """
-    Read feedback content from a Hugging Face repository based on the current year.
+    Read feedback content from a Hugging Face repository within the last LEADERBOARD_UPDATE_TIME_FRAME_DAYS days.
 
     Args:
         repo_name (str): Hugging Face repository name.
@@ -347,14 +361,12 @@ def load_content_from_hf(repo_name="SWE-Arena/model_votes"):
         list: Aggregated feedback data read from the repository.
     """
     vote_data = []
-    year = str(datetime.now().year)
-
     try:
         api = HfApi()
         # List all files in the repository
         for file in api.list_repo_files(repo_id=repo_name, repo_type="dataset"):
-            # Filter files by current year
-            if year not in file:
+            # Filter files by last LEADERBOARD_UPDATE_TIME_FRAME_DAYS days
+            if not is_file_within_time_frame(file, LEADERBOARD_UPDATE_TIME_FRAME_DAYS):
                 continue
             # Download and aggregate data
             local_path = hf_hub_download(
@@ -426,7 +438,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         )
 
     # Load conversation data from the Hugging Face repository
-    conversation_data = load_content_from_hf("SWE-Arena/model_conversations")
+    conversation_data = load_content_from_hf("SWE-Arena/conversation_metadata")
     conversation_df = pd.DataFrame(conversation_data)
 
     # Merge vote data with conversation data
@@ -1391,14 +1403,12 @@ with gr.Blocks(js=clickable_links_js) as app:
                 "winner": winner_model,
             }
 
-            # Get the current year
-            now = datetime.now()
-            folder_name = now.year
-            file_name = now.strftime("%Y%m%d_%H%M%S")
+            # Get the current datetime for file naming
+            file_name = f"swe-model-arena/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(
-                vote_entry, "SWE-Arena/model_votes", folder_name, file_name, token
+                vote_entry, "SWE-Arena/vote_metadata", file_name, token
             )
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
@@ -1411,8 +1421,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             # Save conversations back to the Hugging Face dataset
             save_content_to_hf(
                 conversation_state,
-                "SWE-Arena/model_conversations",
-                folder_name,
+                "SWE-Arena/conversation_metadata",
                 file_name,
                 token,
             )
