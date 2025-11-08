@@ -383,8 +383,6 @@ def load_content_from_hf(repo_name="SWE-Arena/vote_metadata"):
 
 
 def get_leaderboard_data(vote_entry=None, use_cache=True):
-    year = str(datetime.now().year)
-
     # Try to load cached leaderboard first
     if use_cache:
         try:
@@ -410,7 +408,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
                 )
                 return leaderboard_data
         except Exception as e:
-            print(f"No cached leaderboard found for {year}, computing from votes...")
+            print(f"No cached leaderboard found, computing from votes...")
 
     # Load feedback data from the Hugging Face repository
     vote_data = load_content_from_hf()
