@@ -17,7 +17,7 @@ import pandas as pd
 
 from datetime import datetime
 from github import Github
-from gradio_leaderboard import Leaderboard
+from gradio_leaderboard import Leaderboard, ColumnFilter
 from huggingface_hub import upload_file, hf_hub_download, HfApi
 from openai import OpenAI
 
@@ -754,14 +754,70 @@ with gr.Blocks(js=clickable_links_js) as app:
             ],
             search_columns=["Model"],
             filter_columns=[
-                "Elo Score",
-                "Conversation Efficiency Index",
-                "Model Consistency Score",
-                "Average Win Rate",
-                "Bradley-Terry Coefficient",
-                "Eigenvector Centrality Value",
-                "Newman Modularity Score",
-                "PageRank Score",
+                ColumnFilter(
+                    "Elo Score",
+                    min=800,
+                    max=1600,
+                    default=[800, 1600],
+                    type="slider",
+                    label="Elo Score"
+                ),
+                ColumnFilter(
+                    "Conversation Efficiency Index",
+                    min=-1.0,
+                    max=1.0,
+                    default=[-1.0, 1.0],
+                    type="slider",
+                    label="Conversation Efficiency Index"
+                ),
+                ColumnFilter(
+                    "Model Consistency Score",
+                    min=0.0,
+                    max=1.0,
+                    default=[0.0, 1.0],
+                    type="slider",
+                    label="Model Consistency Score"
+                ),
+                ColumnFilter(
+                    "Average Win Rate",
+                    min=0.0,
+                    max=1.0,
+                    default=[0.0, 1.0],
+                    type="slider",
+                    label="Average Win Rate"
+                ),
+                ColumnFilter(
+                    "Bradley-Terry Coefficient",
+                    min=-3.0,
+                    max=3.0,
+                    default=[-3.0, 3.0],
+                    type="slider",
+                    label="Bradley-Terry Coefficient"
+                ),
+                ColumnFilter(
+                    "Eigenvector Centrality Value",
+                    min=0.0,
+                    max=1.0,
+                    default=[0.0, 1.0],
+                    type="slider",
+                    label="Eigenvector Centrality Value"
+                ),
+                ColumnFilter(
+                    "Newman Modularity Score",
+                    min=-1.0,
+                    max=1.0,
+                    default=[-1.0, 1.0],
+                    type="slider",
+                    label="Newman Modularity Score"
+                ),
+                ColumnFilter(
+                    "PageRank Score",
+                    min=0.0,
+                    max=1.0,
+                    default=[0.0, 1.0],
+                    type="slider",
+                    label="PageRank Score"
+                ),
             ],
             datatype=[
                 "number",
