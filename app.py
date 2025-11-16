@@ -40,7 +40,7 @@ SHOW_HINT_STRING = True  # Set to False to hide the hint string altogether
 HINT_STRING = "Once signed in, your votes will be recorded securely."
 
 # Load model metadata
-model_metadata = pd.read_json("model_metadata.jsonl", lines=True)
+model_metadata = pd.read_json("model_data.jsonl", lines=True)
 
 # Create a dictionary mapping model names to their context lengths
 model_context_window = model_metadata.set_index("model_name")[
@@ -350,7 +350,7 @@ def is_file_within_time_frame(file_path, days):
         return False
 
 
-def load_content_from_hf(repo_name="SWE-Arena/vote_metadata"):
+def load_content_from_hf(repo_name="SWE-Arena/vote_data"):
     """
     Read feedback content from a Hugging Face repository within the last LEADERBOARD_UPDATE_TIME_FRAME_DAYS days.
 
@@ -387,7 +387,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
     if use_cache:
         try:
             cached_path = hf_hub_download(
-                repo_id="SWE-Arena/leaderboard_metadata",
+                repo_id="SWE-Arena/leaderboard_data",
                 filename="swe-model-arena.json",
                 repo_type="dataset",
             )
@@ -436,7 +436,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         )
 
     # Load conversation data from the Hugging Face repository
-    conversation_data = load_content_from_hf("SWE-Arena/conversation_metadata")
+    conversation_data = load_content_from_hf("SWE-Arena/conversation_data")
     conversation_df = pd.DataFrame(conversation_data)
 
     # Merge vote data with conversation data
@@ -614,7 +614,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
             upload_file(
                 path_or_fileobj=file_like_object,
                 path_in_repo="swe-model-arena.json",
-                repo_id="SWE-Arena/leaderboard_metadata",
+                repo_id="SWE-Arena/leaderboard_data",
                 repo_type="dataset",
                 token=HfApi().token,
             )
@@ -1462,7 +1462,7 @@ with gr.Blocks(js=clickable_links_js) as app:
 
             # Save feedback back to the Hugging Face dataset
             save_content_to_hf(
-                vote_entry, "SWE-Arena/vote_metadata", file_name, token
+                vote_entry, "SWE-Arena/vote_data", file_name, token
             )
 
             conversation_state["right_chat"][0]["content"] = conversation_state[
@@ -1475,7 +1475,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             # Save conversations back to the Hugging Face dataset
             save_content_to_hf(
                 conversation_state,
-                "SWE-Arena/conversation_metadata",
+                "SWE-Arena/conversation_data",
                 file_name,
                 token,
             )
