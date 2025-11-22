@@ -561,7 +561,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
 
     # Combine all results into a single DataFrame
     # Add Website column by mapping model names to their links
-    website_values = [model_links.get(model, "N/A") for model in elo_scores.index]
+    website_values = [model_links.get(model, "") for model in elo_scores.index]
 
     leaderboard_data = pd.DataFrame(
         {
