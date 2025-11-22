@@ -529,22 +529,17 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         vote_df["left"], vote_df["right"], vote_df["winner"], tie_weight=0
     )
 
-    # Clean up potential inf/NaN values in the results
-    for result in [
-        avr_result,
-        bt_result,
-        newman_result,
-        eigen_result,
-        elo_result,
-        pagerank_result,
-    ]:
-        result.scores = result.scores.replace(
-            [float("inf"), float("-inf")], float("nan")
-        )
+    # Clean up potential inf/NaN values in the results by extracting cleaned scores
+    avr_scores = avr_result.scores.replace([float("inf"), float("-inf")], float("nan"))
+    bt_scores = bt_result.scores.replace([float("inf"), float("-inf")], float("nan"))
+    newman_scores = newman_result.scores.replace([float("inf"), float("-inf")], float("nan"))
+    eigen_scores = eigen_result.scores.replace([float("inf"), float("-inf")], float("nan"))
+    elo_scores = elo_result.scores.replace([float("inf"), float("-inf")], float("nan"))
+    pagerank_scores = pagerank_result.scores.replace([float("inf"), float("-inf")], float("nan"))
 
     # Calculate CEI results
     cei_result = {}
-    for model in elo_result.scores.index:
+    for model in elo_scores.index:
         if model in model_stats and model_stats[model]["cei_max"] > 0:
             cei_result[model] = round(
                 model_stats[model]["cei_sum"] / model_stats[model]["cei_max"], 2
@@ -555,7 +550,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
 
     # Calculate MCS results
     mcs_result = {}
-    for model in elo_result.scores.index:
+    for model in elo_scores.index:
         if model in model_stats and model_stats[model]["self_matches"] > 0:
             mcs_result[model] = round(
                 model_stats[model]["self_draws"] / model_stats[model]["self_matches"], 2
@@ -566,20 +561,20 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
 
     # Combine all results into a single DataFrame
     # Add Website column by mapping model names to their links
-    website_values = [model_links.get(model, "N/A") for model in elo_result.scores.index]
+    website_values = [model_links.get(model, "N/A") for model in elo_scores.index]
 
     leaderboard_data = pd.DataFrame(
         {
-            "Model": elo_result.scores.index,
+            "Model": elo_scores.index,
             "Website": website_values,
-            "Elo Score": elo_result.scores.values,
+            "Elo Score": elo_scores.values,
             "Conversation Efficiency Index": cei_result.values,
             "Model Consistency Score": mcs_result.values,
-            "Average Win Rate": avr_result.scores.values,
-            "Bradley-Terry Coefficient": bt_result.scores.values,
-            "Eigenvector Centrality Value": eigen_result.scores.values,
-            "Newman Modularity Score": newman_result.scores.values,
-            "PageRank Score": pagerank_result.scores.values,
+            "Average Win Rate": avr_scores.values,
+            "Bradley-Terry Coefficient": bt_scores.values,
+            "Eigenvector Centrality Value": eigen_scores.values,
+            "Newman Modularity Score": newman_scores.values,
+            "PageRank Score": pagerank_scores.values,
         }
     )
 
