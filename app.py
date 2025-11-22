@@ -423,6 +423,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
             columns=[
                 "Rank",
                 "Model",
+                "Website",
                 "Elo Score",
                 "Conversation Efficiency Index",
                 "Model Consistency Score",
@@ -564,9 +565,13 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
     mcs_result = pd.Series(mcs_result)
 
     # Combine all results into a single DataFrame
+    # Add Website column by mapping model names to their links
+    website_values = [model_links.get(model, "N/A") for model in elo_result.scores.index]
+
     leaderboard_data = pd.DataFrame(
         {
             "Model": elo_result.scores.index,
+            "Website": website_values,
             "Elo Score": elo_result.scores.values,
             "Conversation Efficiency Index": cei_result.values,
             "Model Consistency Score": mcs_result.values,
@@ -600,8 +605,6 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
         ["Rank"] + [col for col in leaderboard_data.columns if col != "Rank"]
     ]
 
-    # Note: Links are made clickable via JavaScript, keeping plain model names here
-
     # Save leaderboard data if this is a new vote
     if vote_entry is not None:
         try:
@@ -632,49 +635,6 @@ def toggle_submit_button(text):
         return gr.update(interactive=True)  # Enable the button
 
 
-# JavaScript to make model name links clickable in the leaderboard
-# Uses event delegation on the table container for better stability
-clickable_links_js = (
-    """
-function() {
-    const modelLinks = """
-    + json.dumps(model_links)
-    + """;
-
-    function makeLinksClickable() {
-        // Find all table cells in the Model column (2nd column)
-        const rows = document.querySelectorAll('table tbody tr');
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length >= 2) {
-                const modelCell = cells[1]; // Model is the 2nd column
-                const cellText = modelCell.textContent.trim();
-
-                // Check if this cell contains a model name and hasn't been converted yet
-                if (modelLinks[cellText] && !modelCell.querySelector('a')) {
-                    // Create clickable link
-                    const link = document.createElement('a');
-                    link.href = modelLinks[cellText];
-                    link.textContent = cellText;
-                    link.target = '_blank';
-                    link.style.color = '#2563eb';
-                    link.style.textDecoration = 'underline';
-                    link.style.fontWeight = '500';
-
-                    // Replace text with link
-                    modelCell.innerHTML = '';
-                    modelCell.appendChild(link);
-                }
-            }
-        });
-    }
-
-    // Continuous polling approach - runs every 300ms
-    // This is the ONLY reliable way with virtual scrolling components
-    setInterval(makeLinksClickable, 300);
-}
-"""
-)
 
 # Function to check initial authentication status
 def check_auth_on_load(request: gr.Request):
@@ -725,7 +685,7 @@ def check_auth_on_load(request: gr.Request):
 
 
 # Gradio Interface
-with gr.Blocks(js=clickable_links_js) as app:
+with gr.Blocks(title="SWE-Model-Arena", theme=gr.themes.Soft()) as app:
     user_authenticated = gr.State(False)
     models_state = gr.State({})
     conversation_state = gr.State({})
@@ -735,24 +695,28 @@ with gr.Blocks(js=clickable_links_js) as app:
 
     with gr.Tab("🏆Leaderboard"):
         # Add title and description as a Markdown component
-        leaderboard_intro = gr.Markdown(
-            """
-            # 🏆 FM4SE Leaderboard: Community-Driven Evaluation of Top Foundation Models (FMs) in Software Engineering (SE) Tasks
-            The SWE-Model-Arena is an open-source platform designed to evaluate foundation models through human preference, fostering transparency and collaboration. This platform aims to empower the SE community to assess and compare the performance of leading FMs in related tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).
-            """,
-            elem_classes="leaderboard-intro",
+        gr.Markdown("# 🏆 FM4SE Leaderboard")
+        gr.Markdown(
+            "Community-Driven Evaluation of Top Foundation Models (FMs) in Software Engineering (SE) Tasks"
         )
+        gr.Markdown(
+            "*The SWE-Model-Arena is an open-source platform designed to evaluate foundation models through human preference, "
+            "fostering transparency and collaboration. This platform aims to empower the SE community to assess and compare the "
+            "performance of leading FMs in related tasks. For technical details, check out our [paper](https://arxiv.org/abs/2502.01860).*"
+        )
+
         # Initialize the leaderboard with the DataFrame containing the expected columns
         leaderboard_component = Leaderboard(
             value=get_leaderboard_data(use_cache=True),
             select_columns=[
                 "Rank",
                 "Model",
+                "Website",
                 "Elo Score",
                 "Conversation Efficiency Index",
                 "Model Consistency Score",
             ],
-            search_columns=["Model"],
+            search_columns=["Model", "Website"],
             filter_columns=[
                 ColumnFilter(
                     "Elo Score",
@@ -822,6 +786,7 @@ with gr.Blocks(js=clickable_links_js) as app:
             datatype=[
                 "number",
                 "str",
+                "str",
                 "number",
                 "number",
                 "number",
@@ -832,8 +797,12 @@ with gr.Blocks(js=clickable_links_js) as app:
                 "number",
             ],
         )
+
+        # Add a divider
+        gr.Markdown("---")
+
         # Add a citation block in Markdown
-        citation_component = gr.Markdown(
+        gr.Markdown(
             """
             Made with ❤️ for SWE-Model-Arena. If this work is useful to you, please consider citing our vision paper:
             ```
@@ -850,26 +819,29 @@ with gr.Blocks(js=clickable_links_js) as app:
         )
     with gr.Tab("⚔️Arena"):
         # Add title and description as a Markdown component
-        arena_intro = gr.Markdown(
-            f"""
-            # ⚔️ SWE-Model-Arena: Explore and Test Top FMs with SE Tasks by Community Voting
+        gr.Markdown("# ⚔️ SWE-Model-Arena")
+        gr.Markdown("Explore and Test Top FMs with SE Tasks by Community Voting")
 
-            ## 📜How It Works
+        gr.Markdown("### 📜 How It Works")
+        gr.Markdown(
+            f"""
             - **Blind Comparison**: Submit a SE-related query to two anonymous FMs randomly selected from up to {len(available_models)} top models from OpenAI, Gemini, Grok, Claude, Deepseek, Qwen, Llama, Mistral, and others.
             - **Interactive Voting**: Engage in multi-turn dialogues with both FMs and compare their responses. You can continue the conversation until you confidently choose the better model.
             - **Fair Play Rules**: Votes are counted only if FM identities remain anonymous. Revealing a FM's identity disqualifies the session.
-
-            **Note:** Due to budget constraints, responses that take longer than {TIMEOUT} seconds to generate will be discarded.
-            """,
-            elem_classes="arena-intro",
+            """
         )
+        gr.Markdown(f"*Note: Due to budget constraints, responses that take longer than {TIMEOUT} seconds to generate will be discarded.*")
+
+        # Add a divider
+        gr.Markdown("---")
+
         # Add Hugging Face Sign In button and message
         with gr.Row():
             # Define the markdown text with or without the hint string
-            markdown_text = "## Please sign in first to vote!"
+            markdown_text = "### Please sign in first to vote!"
             if SHOW_HINT_STRING:
-                markdown_text += f"\n{HINT_STRING}"
-            hint_markdown = gr.Markdown(markdown_text, elem_classes="markdown-text")
+                markdown_text += f"\n*{HINT_STRING}*"
+            hint_markdown = gr.Markdown(markdown_text)
             with gr.Column():
                 login_button = gr.LoginButton(
                     "Sign in with Hugging Face", elem_id="oauth-button"
@@ -1538,12 +1510,14 @@ with gr.Blocks(js=clickable_links_js) as app:
             ],
         )
 
-        # Add Terms of Service at the bottom
-        terms_of_service = gr.Markdown(
-            """
-            ## Terms of Service
+        # Add a divider
+        gr.Markdown("---")
 
-            Users are required to agree to the following terms before using the service:
+        # Add Terms of Service at the bottom
+        gr.Markdown("### Terms of Service")
+        gr.Markdown(
+            """
+            *Users are required to agree to the following terms before using the service:*
 
             - The service is a **research preview**. It only provides limited safety measures and may generate offensive content.
             - It must not be used for any **illegal, harmful, violent, racist, or sexual** purposes.

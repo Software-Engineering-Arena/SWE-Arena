@@ -1,10 +1,10 @@
 ---
 title: SWE-Model-Arena
 emoji: 🎯
-colorFrom: blue
-colorTo: purple
+colorFrom: green
+colorTo: red
 sdk: gradio
-sdk_version: 5.49.1
+sdk_version: 5.50.0
 app_file: app.py
 hf_oauth: true
 pinned: false
@@ -48,7 +48,6 @@ Existing evaluation frameworks (e.g. [LMArena](https://lmarena.ai)) often don't 
 ### Prerequisites
 
 - A [Hugging Face](https://huggingface.co) account
-- Basic understanding of software engineering workflows
 
 ### Usage
 
