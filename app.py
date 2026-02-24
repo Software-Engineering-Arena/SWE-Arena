@@ -1120,7 +1120,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
                     "Elo Score": 2,
                     "Win Rate": 2,
                     "Conversation Efficiency Index": 2,
-                    "Consistency Index": 2,
+                    "Conversation Consistency Index": 2,
                     "Bradley-Terry Coefficient": 2,
                     "Eigenvector Centrality Value": 2,
                     "Newman Modularity Score": 2,
@@ -1149,7 +1149,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
                 "Elo Score",
                 "Win Rate",
                 "Conversation Efficiency Index",
-                "Consistency Index",
+                "Conversation Consistency Index",
                 "Bradley-Terry Coefficient",
                 "Eigenvector Centrality Value",
                 "Newman Modularity Score",
@@ -1288,7 +1288,7 @@ def get_leaderboard_data(vote_entry=None, use_cache=True):
             "Elo Score": elo_scores.values,
             "Win Rate": avr_scores.values,
             "Conversation Efficiency Index": cei_result.values,
-            "Consistency Index": mcs_result.values,
+            "Conversation Consistency Index": mcs_result.values,
             "Bradley-Terry Coefficient": bt_scores.values,
             "Eigenvector Centrality Value": eigen_scores.values,
             "Newman Modularity Score": newman_scores.values,
@@ -1546,7 +1546,7 @@ with gr.Blocks(title="SWE-Chatbot-Arena", theme=gr.themes.Soft()) as app:
                 "Organization",
                 "Elo Score",
                 "Conversation Efficiency Index",
-                "Consistency Index",
+                "Conversation Consistency Index",
             ],
             search_columns=["Model"],
             filter_columns=[
@@ -1575,12 +1575,12 @@ with gr.Blocks(title="SWE-Chatbot-Arena", theme=gr.themes.Soft()) as app:
                     label="Conversation Efficiency Index"
                 ),
                 ColumnFilter(
-                    "Consistency Index",
+                    "Conversation Consistency Index",
                     min=0,
                     max=1,
                     default=[0, 1],
                     type="slider",
-                    label="Consistency Index"
+                    label="Conversation Consistency Index"
                 ),
             ],
             datatype=[
