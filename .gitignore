@@ -1,7 +1,7 @@
-.env
-.venv
+.claude
+.omc
+*.env
+*.venv
 *.ipynb
 *.pyc
-.claude
-.vscode
-.omc
+*.duckdb
